@@ -127,7 +127,7 @@ with st.sidebar:
         value=int(DAC_USD_PER_T_BY_YEAR[year]), step=10,
         key=f"co2_dac_{year}",   # resets slider when year selector changes
         help=(
-            "Year-dependent default: 2035 = $510/t, 2050 = $300/t. "
+            "Year-dependent default: 2035 = $478/t, 2050 = $234/t. "
             "Override freely; ETC Mind the Gap (2021) uses $100–300/t 2050."
         ),
     )

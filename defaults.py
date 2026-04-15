@@ -417,8 +417,8 @@ IRON_AIR = {
 # DAC costs are year-dependent. Defaults reflect current project-level quotes
 # (2035: ~$510/t) trending toward mature-technology estimates (2050: ~$300/t).
 DAC_USD_PER_T_BY_YEAR = {
-    2035: 510.0,
-    2050: 300.0,
+    2035: 478.0,
+    2050: 234.0,
 }
 
 GLOBAL_DEFAULTS = {
