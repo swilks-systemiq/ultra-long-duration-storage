@@ -362,7 +362,7 @@ with tab_compare:
                 compounded efficiency losses (electrolyser × methanation × CCGT ≈ 35%) combined with
                 CO2 feedstock cost and (new) gas-storage CAPEX. If existing natural-gas storage can be
                 reused at near-zero marginal cost, and biogenic/point-source CO2 is available at <$30/t,
-                e-methane's gap narrows sharply — try **CH4 storage capex → $0.20/kWh** and
+                e-methane's gap narrows sharply — try **CH4 storage capex → $0.03/kWh** and
                 **CO2 (Biogenic) → $0/t** in the Assumptions tab to see this.
 
                 **Why CH4 + CCS usually wins:** CCGTs are cheaper per kW than electrolysers, their

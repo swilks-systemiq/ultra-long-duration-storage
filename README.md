@@ -86,16 +86,16 @@ Other pathways at Ex-China 2050 defaults sit inside ETC ranges:
 | Natural gas price ($6/MMBtu) | ETC Section 1.5.1 |
 | DAC CO2 cost ($200/t 2050) | ETC *Mind the Gap* (2021) |
 | **Methanation CAPEX & efficiency** | Supplementary — IEA (2020); academic TEA literature |
-| **CH4 (gas) storage CAPEX & cycles** | Supplementary — IEA/EIA gas-storage cost data |
+| **CH4 (gas) storage CAPEX & cycles** | Supplementary — EIA/FERC-linked underground gas-storage cost data |
 | **Iron-air CAPEX, efficiency** | Supplementary — Form Energy public targets; BNEF (2024) Long-Duration Energy Storage Survey |
-| Seasonal cycle count (1.5/yr for CH4) | Supplementary — summer-to-winter assumption |
+| Seasonal cycle count (1.5/yr for H2 and CH4) | Supplementary — summer-to-winter assumption |
 
 The Assumptions tab in the UI lists every value with its source tag.
 
 ## Key sanity checks built into the default view
 
 - Solar → e-methane (DAC, $200/t CO2, new gas storage) lands *above* H2 → OCGT Scenario A → the headline ETC conclusion still holds at default inputs.
-- But if existing gas-storage infrastructure can be reused (drop CH4 storage CAPEX to ~$0.20/kWh) **and** biogenic CO2 is available at ≤$30/t, e-methane closes most of the gap to CH4+CCS.
+- But if existing gas-storage infrastructure can be reused (drop CH4 storage CAPEX to ~$0.03/kWh) **and** biogenic CO2 is available at ≤$30/t, e-methane closes most of the gap to CH4+CCS.
 - Iron-air battery is **cycle-constrained, not CAPEX-constrained**. With 100h duration, a full cycle takes ~200h; at realistic 50% availability that caps cycles at ~15/yr. At Form Energy's Maine project implied CAPEX (~$33/kWh) and ~45% RTE, this lands at $300–350/MWh delivered — not the $47/MWh that more aggressive cycle assumptions would produce. The sidebar exposes a "cycles per year" slider and the heatmap can sweep it, because this is the central Liebreich/Jaramillo debate point.
 
 ## Files
