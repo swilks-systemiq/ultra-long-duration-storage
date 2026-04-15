@@ -377,7 +377,7 @@ IRON_AIR = {
         "capex_per_kwh": 30.0,
         "fixed_opex_pct": 0.015,
         "efficiency": 0.45,
-        "cycles_per_year": 12,       # 100h duration + ~50% availability; cycle-limited
+        "cycles_per_year": 6,        # 100h system; ~7% utilisation equivalent
         "lifetime_years": 20,
         "discount_rate": 0.08,
         "source": "Supplementary: Form Energy disclosures (~$33/kWh); Liebreich (Cleaning Up ep.144) on cycle constraint",
@@ -386,7 +386,7 @@ IRON_AIR = {
         "capex_per_kwh": 22.0,
         "fixed_opex_pct": 0.015,
         "efficiency": 0.50,
-        "cycles_per_year": 12,        # cycle constraint is physics, not cost
+        "cycles_per_year": 6,         # 100h system; ~7% utilisation equivalent
         "lifetime_years": 20,
         "discount_rate": 0.08,
         "source": "Supplementary: Form Energy 2030+ targets ($20-25/kWh); cycle limit unchanged",
@@ -395,7 +395,7 @@ IRON_AIR = {
         "capex_per_kwh": 33.0,        # Form Energy Maine project implied cost
         "fixed_opex_pct": 0.015,
         "efficiency": 0.45,
-        "cycles_per_year": 12,
+        "cycles_per_year": 6,
         "lifetime_years": 20,
         "discount_rate": 0.08,
         "source": "Supplementary: Form Energy Maine project (~$1bn / 30 GWh = $33/kWh)",
@@ -404,7 +404,7 @@ IRON_AIR = {
         "capex_per_kwh": 25.0,
         "fixed_opex_pct": 0.015,
         "efficiency": 0.50,
-        "cycles_per_year": 12,
+        "cycles_per_year": 6,
         "lifetime_years": 20,
         "discount_rate": 0.08,
         "source": "Supplementary: Form Energy 2030+ cost target; cycles still physics-limited",

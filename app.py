@@ -100,7 +100,7 @@ with st.sidebar:
     st.markdown("**Gas storage cycling**")
     storage_cycles = st.slider(
         "H2 / CH4 storage cycles per year",
-        min_value=1.0, max_value=24.0, value=12.0, step=0.5,
+        min_value=1, max_value=24, value=12, step=1,
         help="Shared annual cycle assumption for both H2 and CH4 storage pathways.",
     )
 
@@ -123,10 +123,10 @@ with st.sidebar:
     st.markdown("**Iron-air battery cycles**")
     iron_air_cycles = st.slider(
         "Iron-air cycles per year",
-        min_value=5, max_value=60, value=12, step=1,
-        help=("100h-duration iron-air is cycle-constrained: a full cycle is ~200h, "
-              "so even at 100% availability max ~45 cycles/yr; 15/yr is realistic "
-              "(Liebreich/Form Energy analysis)."),
+        min_value=1, max_value=24, value=6, step=1,
+        help=("For a 100h system, utilisation is approximately cycles × 100 / 8,760. "
+              "So 6 cycles/yr is about 7% utilisation, 12 cycles/yr about 14%, and "
+              "24 cycles/yr about 27%."),
     )
 
     st.markdown("---")
@@ -134,7 +134,9 @@ with st.sidebar:
     gas_price = st.slider(
         "Natural gas price ($/MMBtu)",
         min_value=2.0, max_value=20.0, value=6.0, step=0.5,
-        help="ETC default $6/MMBtu.",
+        help=("ETC default $6/MMBtu. Rough benchmarks: shock pricing of €40–60/MWh is about "
+              "$13.8–20.7/MMBtu. More normal ranges are roughly EU: $8.6–12.1/MMBtu and "
+              "US: $2–4/MMBtu."),
     )
     co2_dac = st.slider(
         "DAC CO2 cost ($/t)",
@@ -203,7 +205,7 @@ def _build_pathways(
     ocgt_util: float, ccgt_util: float, elec_util: float, storage_cycles: float,
     gas_price: float,
     co2_dac: float, co2_biogenic: float, co2_point_source: float, co2_removal: float,
-    iron_air_cycles: int = 12,
+    iron_air_cycles: int = 6,
     h2_turbine: str = "OCGT",
     em_turbine: str = "OCGT",
 ):
