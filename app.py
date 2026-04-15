@@ -290,8 +290,8 @@ selected = {k: v for k, v in pathways.items() if k in pathways_to_show}
 # ---------------------------------------------------------------------------
 # Main tabs
 # ---------------------------------------------------------------------------
-tab_compare, tab_sensitivity, tab_heatmap, tab_assumptions = st.tabs(
-    ["📊 LCOS comparison", "🎯 Sensitivity (tornado)", "🔥 2D heatmap", "📋 Assumptions"]
+tab_compare, tab_flows, tab_sensitivity, tab_heatmap, tab_assumptions = st.tabs(
+    ["📊 LCOS comparison", "🔀 Pathway diagrams", "🎯 Sensitivity (tornado)", "🔥 2D heatmap", "📋 Assumptions"]
 )
 
 
@@ -471,6 +471,168 @@ with tab_compare:
                   of stored energy depending on containment.
                 """
             )
+
+
+# ---------------------------------------------------------------------------
+# Tab — Pathway diagrams (simplified flow charts)
+# ---------------------------------------------------------------------------
+with tab_flows:
+    st.subheader("Pathway flow diagrams")
+    st.caption(
+        "Simplified schematics of how each pathway converts inputs to delivered "
+        "electricity. Node border colour = functional category; values reflect "
+        "current sidebar settings."
+    )
+
+    st.markdown(
+        """
+        **Categories:**
+        &nbsp;<span style="color:#1f77b4;font-weight:600">■ Feedstock</span> (electricity, gas, CO2)
+        &nbsp;·&nbsp; <span style="color:#ff7f0e;font-weight:600">■ Conversion</span> (electrolyser, methanation, CCS)
+        &nbsp;·&nbsp; <span style="color:#2ca02c;font-weight:600">■ Storage</span> (cavern, tank, battery)
+        &nbsp;·&nbsp; <span style="color:#d62728;font-weight:600">■ Turbine</span> (OCGT / CCGT)
+        &nbsp;·&nbsp; <span style="color:#9467bd;font-weight:600">■ Offset</span> (CO2 removal credit)
+        &nbsp;·&nbsp; <span style="color:#7f7f7f;font-weight:600">■ Output</span> (delivered / vented)
+        """,
+        unsafe_allow_html=True,
+    )
+
+    CAT_STYLE = {
+        "feedstock":  'fillcolor="#d6e9f8", color="#1f77b4"',
+        "conversion": 'fillcolor="#fde4c8", color="#ff7f0e"',
+        "storage":    'fillcolor="#d4ecd4", color="#2ca02c"',
+        "turbine":    'fillcolor="#f5cccc", color="#d62728"',
+        "offset":     'fillcolor="#e6d6ef", color="#9467bd"',
+        "output":     'fillcolor="#e8e8e8", color="#7f7f7f"',
+    }
+
+    def _dot(nodes, edges):
+        """
+        Build a DOT string.
+          nodes: list of (node_id, label, category)
+          edges: list of (from_id, to_id, edge_label_or_empty)
+        """
+        lines = [
+            "digraph G {",
+            "  rankdir=LR;",
+            '  bgcolor="transparent";',
+            '  node [shape=box, style="rounded,filled", fontname="Arial", penwidth=2];',
+            '  edge [fontname="Arial", fontsize=10, color="#555555"];',
+            "  graph [nodesep=0.35, ranksep=0.55];",
+        ]
+        for nid, label, cat in nodes:
+            lines.append(f'  {nid} [label="{label}", {CAT_STYLE[cat]}];')
+        for f, t, lbl in edges:
+            lines.append(
+                f'  {f} -> {t} [label="{lbl}"];' if lbl else f'  {f} -> {t};'
+            )
+        lines.append("}")
+        return "\n".join(lines)
+
+    # Derived values for labels
+    _h2_t_eff = preset["ocgt"]["efficiency"] if h2_turbine == "OCGT" else preset["ccgt"]["efficiency"]
+    _em_t_eff = preset["ocgt"]["efficiency"] if em_turbine == "OCGT" else preset["ccgt"]["efficiency"]
+    _ccs_net_eff = preset["ccgt"]["efficiency"] * preset["ccs"]["efficiency"]
+
+    diagrams: dict[str, str] = {}
+
+    diagrams["Unabated OCGT (no removals)"] = _dot(
+        nodes=[
+            ("gas",  f"Natural gas\\n${gas_price:.1f}/MMBtu", "feedstock"),
+            ("ocgt", f"OCGT\\nη={preset['ocgt']['efficiency']:.0%}", "turbine"),
+            ("out",  "Electricity\\ndelivered", "output"),
+            ("co2",  "CO2 vented\\n(not priced)", "output"),
+        ],
+        edges=[("gas", "ocgt", ""), ("ocgt", "out", ""), ("ocgt", "co2", "")],
+    )
+
+    diagrams[f"Unabated OCGT + ${int(co2_removal)}/t removal"] = _dot(
+        nodes=[
+            ("gas",    f"Natural gas\\n${gas_price:.1f}/MMBtu", "feedstock"),
+            ("ocgt",   f"OCGT\\nη={preset['ocgt']['efficiency']:.0%}", "turbine"),
+            ("out",    "Electricity\\ndelivered", "output"),
+            ("co2",    "CO2 emissions", "output"),
+            ("offset", f"Carbon removal\\n${int(co2_removal)}/t", "offset"),
+        ],
+        edges=[
+            ("gas", "ocgt", ""), ("ocgt", "out", ""),
+            ("ocgt", "co2", ""), ("co2", "offset", "offset"),
+        ],
+    )
+
+    diagrams[f"Green H2 → {h2_turbine}"] = _dot(
+        nodes=[
+            ("elec_in",      f"Electricity input\\n${elec_price}/MWh", "feedstock"),
+            ("electrolyser", f"Electrolyser\\nη={preset['electrolyser']['efficiency']:.0%}\\nutil {elec_util:.0%}", "conversion"),
+            ("h2_store",     f"H2 salt-cavern\\nstorage\\n{storage_cycles:.0f} cycles/yr", "storage"),
+            ("turbine",      f"{h2_turbine}\\nη={_h2_t_eff:.0%}", "turbine"),
+            ("out",          "Electricity\\ndelivered", "output"),
+        ],
+        edges=[
+            ("elec_in", "electrolyser", ""),
+            ("electrolyser", "h2_store", "H2"),
+            ("h2_store", "turbine", ""),
+            ("turbine", "out", ""),
+        ],
+    )
+
+    diagrams["CH4 + CCS → CCGT"] = _dot(
+        nodes=[
+            ("gas",  f"Natural gas\\n${gas_price:.1f}/MMBtu", "feedstock"),
+            ("ccgt", f"CCGT\\nη={preset['ccgt']['efficiency']:.0%}", "turbine"),
+            ("ccs",  f"CCS capture\\n{preset['ccs']['efficiency']:.0%} retention\\nnet η={_ccs_net_eff:.0%}", "conversion"),
+            ("out",  "Electricity\\ndelivered", "output"),
+            ("co2",  "CO2 captured\\n& stored", "output"),
+        ],
+        edges=[
+            ("gas", "ccgt", ""),
+            ("ccgt", "ccs", "flue"),
+            ("ccs", "co2", ""),
+            ("ccgt", "out", ""),
+        ],
+    )
+
+    for src_label, co2_val in [
+        ("DAC", co2_dac), ("Biogenic", co2_biogenic), ("Point-source", co2_point_source),
+    ]:
+        diagrams[f"E-methane ({src_label}) → {em_turbine}"] = _dot(
+            nodes=[
+                ("elec_in",      f"GElectricity input\\n${elec_price}/MWh", "feedstock"),
+                ("co2_in",       f"CO2 ({src_label})\\n${int(co2_val)}/t", "feedstock"),
+                ("electrolyser", f"Electrolyser\\nη={preset['electrolyser']['efficiency']:.0%}", "conversion"),
+                ("methanation",  f"Methanation\\nη={preset['methanation']['efficiency']:.0%}", "conversion"),
+                ("ch4_store",    f"CH4 storage\\n{storage_cycles:.0f} cycles/yr", "storage"),
+                ("turbine",      f"{em_turbine}\\nη={_em_t_eff:.0%}", "turbine"),
+                ("out",          "Electricity\\ndelivered", "output"),
+            ],
+            edges=[
+                ("elec_in", "electrolyser", ""),
+                ("electrolyser", "methanation", "H2"),
+                ("co2_in", "methanation", ""),
+                ("methanation", "ch4_store", "CH4"),
+                ("ch4_store", "turbine", ""),
+                ("turbine", "out", ""),
+            ],
+        )
+
+    diagrams["Iron-air battery"] = _dot(
+        nodes=[
+            ("elec_in", f"Electricity input\\n${elec_price}/MWh", "feedstock"),
+            ("battery", f"Iron-air battery\\nη_rt={preset['iron_air']['efficiency']:.0%}\\n{iron_air_cycles} cycles/yr", "storage"),
+            ("out",     "Electricity\\ndelivered", "output"),
+        ],
+        edges=[("elec_in", "battery", ""), ("battery", "out", "")],
+    )
+
+    # Render — only the currently selected pathways, in the same order as sidebar
+    shown_any = False
+    for name in pathways_to_show:
+        if name in diagrams:
+            with st.expander(name, expanded=True):
+                st.graphviz_chart(diagrams[name], use_container_width=True)
+                shown_any = True
+    if not shown_any:
+        st.info("Select at least one pathway in the sidebar to see its diagram.")
 
 
 # ---------------------------------------------------------------------------
