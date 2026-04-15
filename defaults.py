@@ -28,7 +28,7 @@ H2_STORAGE_THROUGHPUT_PER_MWH = 0.18 / 33.3 * 1000   # ~$5.4/MWh throughput
 # gas storage projects in EIA/FERC-linked literature.
 CH4_STORAGE_CAPEX_PER_KWH = 0.03
 CH4_STORAGE_THROUGHPUT_PER_MWH = 1.0   # modest handling cost
-SEASONAL_STORAGE_CYCLES_PER_YEAR = 1.5
+STORAGE_CYCLES_PER_YEAR_DEFAULT = 12.0
 
 # ---------------------------------------------------------------------------
 # Electrolyser (ETC Exhibit 1.38)
@@ -130,41 +130,41 @@ H2_STORAGE = {
         "capex_per_kwh": H2_STORAGE_CAPEX_PER_KWH_CHINA,
         "fixed_opex_pct": 0.015,
         "efficiency": 1.0,            # ETC assumes storage losses negligible
-        "cycles_per_year": SEASONAL_STORAGE_CYCLES_PER_YEAR,
+        "cycles_per_year": STORAGE_CYCLES_PER_YEAR_DEFAULT,
         "lifetime_years": 30,
         "discount_rate": 0.08,
         "throughput_cost_per_mwh": H2_STORAGE_THROUGHPUT_PER_MWH,
-        "source": "ETC (2025) Exhibit 1.38 for $/kgH2; cycles aligned to seasonal 1.5/yr default",
+        "source": "ETC (2025) Exhibit 1.38 for $/kgH2; default 12 cycles/yr",
     },
     ("China", 2050): {
         "capex_per_kwh": H2_STORAGE_CAPEX_PER_KWH_CHINA,
         "fixed_opex_pct": 0.015,
         "efficiency": 1.0,
-        "cycles_per_year": SEASONAL_STORAGE_CYCLES_PER_YEAR,
+        "cycles_per_year": STORAGE_CYCLES_PER_YEAR_DEFAULT,
         "lifetime_years": 30,
         "discount_rate": 0.08,
         "throughput_cost_per_mwh": H2_STORAGE_THROUGHPUT_PER_MWH,
-        "source": "ETC (2025) Exhibit 1.38 for $/kgH2; cycles aligned to seasonal 1.5/yr default",
+        "source": "ETC (2025) Exhibit 1.38 for $/kgH2; default 12 cycles/yr",
     },
     ("Ex-China", 2035): {
         "capex_per_kwh": H2_STORAGE_CAPEX_PER_KWH_EX_CHINA,
         "fixed_opex_pct": 0.015,
         "efficiency": 1.0,
-        "cycles_per_year": SEASONAL_STORAGE_CYCLES_PER_YEAR,
+        "cycles_per_year": STORAGE_CYCLES_PER_YEAR_DEFAULT,
         "lifetime_years": 30,
         "discount_rate": 0.08,
         "throughput_cost_per_mwh": H2_STORAGE_THROUGHPUT_PER_MWH,
-        "source": "ETC (2025) Exhibit 1.38 for $/kgH2; cycles aligned to seasonal 1.5/yr default",
+        "source": "ETC (2025) Exhibit 1.38 for $/kgH2; default 12 cycles/yr",
     },
     ("Ex-China", 2050): {
         "capex_per_kwh": H2_STORAGE_CAPEX_PER_KWH_EX_CHINA,
         "fixed_opex_pct": 0.015,
         "efficiency": 1.0,
-        "cycles_per_year": SEASONAL_STORAGE_CYCLES_PER_YEAR,
+        "cycles_per_year": STORAGE_CYCLES_PER_YEAR_DEFAULT,
         "lifetime_years": 30,
         "discount_rate": 0.08,
         "throughput_cost_per_mwh": H2_STORAGE_THROUGHPUT_PER_MWH,
-        "source": "ETC (2025) Exhibit 1.38 for $/kgH2; cycles aligned to seasonal 1.5/yr default",
+        "source": "ETC (2025) Exhibit 1.38 for $/kgH2; default 12 cycles/yr",
     },
 }
 
@@ -176,41 +176,41 @@ CH4_STORAGE = {
         "capex_per_kwh": CH4_STORAGE_CAPEX_PER_KWH,
         "fixed_opex_pct": 0.01,
         "efficiency": 1.0,
-        "cycles_per_year": SEASONAL_STORAGE_CYCLES_PER_YEAR,      # seasonal: summer-to-winter, ~1-2 cycles/yr
+        "cycles_per_year": STORAGE_CYCLES_PER_YEAR_DEFAULT,
         "lifetime_years": 40,
         "discount_rate": 0.07,
         "throughput_cost_per_mwh": CH4_STORAGE_THROUGHPUT_PER_MWH,
-        "source": "Supplementary: EIA/FERC-linked underground gas storage costs; cycles aligned to seasonal 1.5/yr default",
+        "source": "Supplementary: EIA/FERC-linked underground gas storage costs; default 12 cycles/yr",
     },
     ("China", 2050): {
         "capex_per_kwh": CH4_STORAGE_CAPEX_PER_KWH,
         "fixed_opex_pct": 0.01,
         "efficiency": 1.0,
-        "cycles_per_year": SEASONAL_STORAGE_CYCLES_PER_YEAR,
+        "cycles_per_year": STORAGE_CYCLES_PER_YEAR_DEFAULT,
         "lifetime_years": 40,
         "discount_rate": 0.07,
         "throughput_cost_per_mwh": CH4_STORAGE_THROUGHPUT_PER_MWH,
-        "source": "Supplementary: EIA/FERC-linked underground gas storage costs; cycles aligned to seasonal 1.5/yr default",
+        "source": "Supplementary: EIA/FERC-linked underground gas storage costs; default 12 cycles/yr",
     },
     ("Ex-China", 2035): {
         "capex_per_kwh": CH4_STORAGE_CAPEX_PER_KWH,
         "fixed_opex_pct": 0.01,
         "efficiency": 1.0,
-        "cycles_per_year": SEASONAL_STORAGE_CYCLES_PER_YEAR,
+        "cycles_per_year": STORAGE_CYCLES_PER_YEAR_DEFAULT,
         "lifetime_years": 40,
         "discount_rate": 0.07,
         "throughput_cost_per_mwh": CH4_STORAGE_THROUGHPUT_PER_MWH,
-        "source": "Supplementary: EIA/FERC-linked underground gas storage costs; cycles aligned to seasonal 1.5/yr default",
+        "source": "Supplementary: EIA/FERC-linked underground gas storage costs; default 12 cycles/yr",
     },
     ("Ex-China", 2050): {
         "capex_per_kwh": CH4_STORAGE_CAPEX_PER_KWH,
         "fixed_opex_pct": 0.01,
         "efficiency": 1.0,
-        "cycles_per_year": SEASONAL_STORAGE_CYCLES_PER_YEAR,
+        "cycles_per_year": STORAGE_CYCLES_PER_YEAR_DEFAULT,
         "lifetime_years": 40,
         "discount_rate": 0.07,
         "throughput_cost_per_mwh": CH4_STORAGE_THROUGHPUT_PER_MWH,
-        "source": "Supplementary: EIA/FERC-linked underground gas storage costs; cycles aligned to seasonal 1.5/yr default",
+        "source": "Supplementary: EIA/FERC-linked underground gas storage costs; default 12 cycles/yr",
     },
 }
 

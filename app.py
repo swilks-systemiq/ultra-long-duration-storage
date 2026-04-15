@@ -69,7 +69,7 @@ with st.sidebar:
     ) / 100.0
     elec_price = st.slider(
         "Input electricity price ($/MWh)",
-        min_value=0, max_value=150, value=0, step=5,
+        min_value=0, max_value=150, value=40, step=5,
         help=("Price of grid electricity feeding electrolyser/methanation. "
               "ETC Scenario A uses $0, Scenario B uses $70."),
     )
@@ -94,6 +94,14 @@ with st.sidebar:
         min_value=5, max_value=80, value=20, step=5,
         help="ETC Scenario A uses 20%; Scenario B uses 50%.",
     ) / 100.0
+
+    st.markdown("---")
+    st.markdown("**Gas storage cycling**")
+    storage_cycles = st.slider(
+        "H2 / CH4 storage cycles per year",
+        min_value=1.0, max_value=24.0, value=12.0, step=0.5,
+        help="Shared annual cycle assumption for both H2 and CH4 storage pathways.",
+    )
 
     st.markdown("---")
     st.markdown("**Iron-air battery cycles**")
@@ -165,7 +173,7 @@ with st.sidebar:
 def _build_pathways(
     region: str, year: int,
     discount_rate: float, elec_price: float,
-    ocgt_util: float, ccgt_util: float, elec_util: float,
+    ocgt_util: float, ccgt_util: float, elec_util: float, storage_cycles: float,
     gas_price: float,
     co2_dac: float, co2_biogenic: float, co2_point_source: float, co2_removal: float,
     iron_air_cycles: int = 15,
@@ -180,6 +188,8 @@ def _build_pathways(
     preset["ocgt"]["utilisation"] = ocgt_util
     preset["ccgt"]["utilisation"] = ccgt_util
     preset["ccs"]["utilisation"] = ccgt_util
+    preset["h2_storage"]["cycles_per_year"] = storage_cycles
+    preset["ch4_storage"]["cycles_per_year"] = storage_cycles
     preset["iron_air"]["cycles_per_year"] = iron_air_cycles
 
     # For CH4+CCS pathway, apply CCS parasitic penalty to CCGT efficiency
@@ -228,7 +238,7 @@ def _build_pathways(
 
 pathways, preset = _build_pathways(
     region, year, discount_rate, elec_price,
-    ocgt_util, ccgt_util, elec_util,
+    ocgt_util, ccgt_util, elec_util, storage_cycles,
     gas_price, co2_dac, co2_biogenic, co2_point_source, co2_removal,
     iron_air_cycles,
 )

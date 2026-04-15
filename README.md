@@ -88,7 +88,7 @@ Other pathways at Ex-China 2050 defaults sit inside ETC ranges:
 | **Methanation CAPEX & efficiency** | Supplementary — IEA (2020); academic TEA literature |
 | **CH4 (gas) storage CAPEX & cycles** | Supplementary — EIA/FERC-linked underground gas-storage cost data |
 | **Iron-air CAPEX, efficiency** | Supplementary — Form Energy public targets; BNEF (2024) Long-Duration Energy Storage Survey |
-| Seasonal cycle count (1.5/yr for H2 and CH4) | Supplementary — summer-to-winter assumption |
+| Storage cycle count (12/yr default for H2 and CH4) | User-adjustable default for ultra-long-duration balancing case |
 
 The Assumptions tab in the UI lists every value with its source tag.
 
