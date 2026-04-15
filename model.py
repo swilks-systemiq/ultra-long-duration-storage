@@ -199,7 +199,7 @@ class Pathway:
             mwh_elec_in = 1.0 / self.efficiency_product()
             out["Electricity input"] = self.electricity_input_price * mwh_elec_in
 
-        # CO2 feedstock cost for e-methane pathways
+        # CO2 feedstock cost for E-CH4 pathways
         if self.needs_co2 and self.co2_cost_per_t:
             # tCO2 per MWh_CH4 * MWh_CH4 per MWhe delivered
             # MWh_CH4 per MWhe = 1 / (eff of stages after methanation, inclusive of turbine)
@@ -284,7 +284,7 @@ def build_emethane(
         _stage_from_dict(turbine_type, turbine, discount_rate),
     ]
     return Pathway(
-        name=f"E-methane ({co2_source_label}) → {turbine_type}",
+        name=f"E-CH4 ({co2_source_label}) → {turbine_type}",
         stages=stages,
         electricity_input_price=electricity_price,
         stage_1_is_electrolyser=True,
