@@ -165,7 +165,7 @@ class Pathway:
     co2_t_per_mwh_ch4: float = T_CO2_PER_MWH_CH4   # stoich CO2 need
     needs_co2: bool = False                        # toggles CO2 cost line
     carbon_removal_cost_per_t: float = 0.0         # $/tCO2 for offsetting residual emissions
-    co2_emitted_t_per_mwhe: float = 0.0            # emissions needing offset (unabated gas)
+    co2_emitted_t_per_mwhe: float = 0.0            # emissions needing offset (unabated OCGT)
     notes: str = ""
 
     def efficiency_product(self) -> float:
@@ -219,7 +219,7 @@ class Pathway:
             t_co2 = self.co2_t_per_mwh_ch4 * mwh_ch4_per_mwhe
             out["CO2 feedstock"] = self.co2_cost_per_t * t_co2
 
-        # Carbon removal offset cost (for unabated gas pathway)
+        # Carbon removal offset cost (for unabated OCGT pathway)
         if self.carbon_removal_cost_per_t and self.co2_emitted_t_per_mwhe:
             out["Carbon removal offset"] = (
                 self.carbon_removal_cost_per_t * self.co2_emitted_t_per_mwhe
@@ -307,7 +307,7 @@ def build_unabated_gas_removal(ocgt, gas_price_usd_per_mmbtu, co2_removal_cost, 
     # Emissions: natural gas ~0.2 tCO2/MWh_LHV; divided by turbine eff
     emissions_t_per_mwhe = 0.2 / max(ocgt["efficiency"], 1e-6)
     return Pathway(
-        name=f"Unabated gas + removals (${co2_removal_cost}/tCO2)",
+        name=f"Unabated OCGT + removals (${co2_removal_cost}/tCO2)",
         stages=[turbine],
         carbon_removal_cost_per_t=co2_removal_cost,
         co2_emitted_t_per_mwhe=emissions_t_per_mwhe,
@@ -316,7 +316,7 @@ def build_unabated_gas_removal(ocgt, gas_price_usd_per_mmbtu, co2_removal_cost, 
 
 def build_unabated_gas_no_removal(ocgt, gas_price_usd_per_mmbtu, discount_rate=None):
     """
-    Fossil status-quo counterfactual: unabated gas turbine, no carbon removal offset.
+    Fossil status-quo counterfactual: unabated OCGT, no carbon removal offset.
 
     No CO2 cost line; emissions are externalised. This is the 'do nothing to decarbonise'
     comparator that every other pathway must beat on a delivered-electricity cost basis
@@ -328,7 +328,7 @@ def build_unabated_gas_no_removal(ocgt, gas_price_usd_per_mmbtu, discount_rate=N
     turbine.fuel_cost_per_mwh_out = fuel_cost_per_mwh_elec
     emissions_t_per_mwhe = 0.2 / max(ocgt["efficiency"], 1e-6)
     p = Pathway(
-        name="Unabated gas (no removals)",
+        name="Unabated OCGT (no removals)",
         stages=[turbine],
     )
     # Attach emissions info for display (not costed)

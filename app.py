@@ -128,7 +128,7 @@ with st.sidebar:
     co2_removal = st.slider(
         "Carbon removal cost for offsets ($/t)",
         min_value=0, max_value=600, value=200, step=25,
-        help="For 'Unabated gas + removals' pathway. ETC modelled $50 and $200.",
+        help="For 'Unabated OCGT + removals' pathway. ETC modelled $50 and $200.",
     )
 
     st.markdown("---")
@@ -136,21 +136,21 @@ with st.sidebar:
     pathways_to_show = st.multiselect(
         "Select pathways to compare",
         options=[
-            "Unabated gas (no removals)",
+            "Unabated OCGT (no removals)",
             "Green H2 → OCGT",
             "Green H2 → CCGT",
             "CH4 + CCS → CCGT",
-            f"Unabated gas + ${co2_removal}/t removal",
+            f"Unabated OCGT + ${co2_removal}/t removal",
             "E-methane (DAC) → CCGT",
             "E-methane (Biogenic) → CCGT",
             "E-methane (Point-source) → CCGT",
             "Iron-air battery",
         ],
         default=[
-            "Unabated gas (no removals)",
+            "Unabated OCGT (no removals)",
             "Green H2 → OCGT",
             "CH4 + CCS → CCGT",
-            f"Unabated gas + ${co2_removal}/t removal",
+            f"Unabated OCGT + ${co2_removal}/t removal",
             "E-methane (DAC) → CCGT",
             "E-methane (Biogenic) → CCGT",
             "Iron-air battery",
@@ -187,7 +187,7 @@ def _build_pathways(
     ccgt_ccs["efficiency"] = preset["ccgt"]["efficiency"] * preset["ccs"]["efficiency"]
 
     pathways = {}
-    pathways["Unabated gas (no removals)"] = build_unabated_gas_no_removal(
+    pathways["Unabated OCGT (no removals)"] = build_unabated_gas_no_removal(
         preset["ocgt"], gas_price_usd_per_mmbtu=gas_price, discount_rate=discount_rate,
     )
     pathways["Green H2 → OCGT"] = build_h2_ocgt(
@@ -201,7 +201,7 @@ def _build_pathways(
     pathways["CH4 + CCS → CCGT"] = build_ch4_ccs_ccgt(
         ccgt_ccs, preset["ccs"], gas_price_usd_per_mmbtu=gas_price, discount_rate=discount_rate,
     )
-    pathways[f"Unabated gas + ${int(co2_removal)}/t removal"] = build_unabated_gas_removal(
+    pathways[f"Unabated OCGT + ${int(co2_removal)}/t removal"] = build_unabated_gas_removal(
         preset["ocgt"], gas_price_usd_per_mmbtu=gas_price,
         co2_removal_cost=co2_removal, discount_rate=discount_rate,
     )
@@ -295,12 +295,12 @@ with tab_compare:
         df["Category"] = df["Component"].apply(classify)
 
         # Row ordering for the horizontal bar chart:
-        #  1. "Unabated gas (no removals)" pinned to the TOP as the fossil counterfactual.
+        #  1. "Unabated OCGT (no removals)" pinned to the TOP as the fossil counterfactual.
         #  2. All other pathways below it, sorted ASCENDING by LCOS.
         # Plotly's horizontal-bar y-axis places the FIRST category in categoryarray at the
         # bottom, so we build the list in reverse (bottom -> top) and hand it over explicitly.
         totals = df.groupby("Pathway")["Cost ($/MWh)"].sum().sort_values()
-        counterfactual = "Unabated gas (no removals)"
+        counterfactual = "Unabated OCGT (no removals)"
         decarb_sorted_ascending = [p for p in totals.index if p != counterfactual]
         # Bottom-to-top: most expensive decarb pathway at the bottom, cheapest just below the
         # counterfactual at the top.
@@ -406,7 +406,7 @@ with tab_sensitivity:
             ccgt_ccs["efficiency"] = preset_override["ccgt"]["efficiency"] * preset_override["ccs"]["efficiency"]
 
             args_map = {
-                "Unabated gas (no removals)": lambda: build_unabated_gas_no_removal(
+                "Unabated OCGT (no removals)": lambda: build_unabated_gas_no_removal(
                     preset_override["ocgt"],
                     gas_price_usd_per_mmbtu=overrides.get("globals.gas_price", gas_price),
                     discount_rate=discount_rate),
@@ -422,7 +422,7 @@ with tab_sensitivity:
                     ccgt_ccs, preset_override["ccs"],
                     gas_price_usd_per_mmbtu=overrides.get("globals.gas_price", gas_price),
                     discount_rate=discount_rate),
-                f"Unabated gas + ${int(co2_removal)}/t removal": lambda: build_unabated_gas_removal(
+                f"Unabated OCGT + ${int(co2_removal)}/t removal": lambda: build_unabated_gas_removal(
                     preset_override["ocgt"],
                     gas_price_usd_per_mmbtu=overrides.get("globals.gas_price", gas_price),
                     co2_removal_cost=overrides.get("globals.co2_removal", co2_removal),
@@ -472,7 +472,7 @@ with tab_sensitivity:
                     ("ccgt.utilisation", preset["ccgt"]["utilisation"], "CCGT utilisation"),
                     ("h2_storage.capex_per_kwh", preset["h2_storage"]["capex_per_kwh"], "H2 storage CAPEX"),
                 ]
-            if path_name == "Unabated gas (no removals)":
+            if path_name == "Unabated OCGT (no removals)":
                 return [
                     ("ocgt.capex_per_kw", preset["ocgt"]["capex_per_kw"], "OCGT CAPEX"),
                     ("ocgt.utilisation", preset["ocgt"]["utilisation"], "OCGT utilisation"),
@@ -632,7 +632,7 @@ with tab_heatmap:
             ccgt_ccs2 = copy.deepcopy(preset_h["ccgt"])
             ccgt_ccs2["efficiency"] = preset_h["ccgt"]["efficiency"] * preset_h["ccs"]["efficiency"]
 
-            if h_path == "Unabated gas (no removals)":
+            if h_path == "Unabated OCGT (no removals)":
                 return build_unabated_gas_no_removal(preset_h["ocgt"],
                                                     gas_price_usd_per_mmbtu=overrides["gas_price"],
                                                     discount_rate=discount_rate)

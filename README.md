@@ -11,11 +11,11 @@ advance of a discussion about **solar → e-methane → CCGT** as a novel season
 
 | Pathway | Notes |
 |---------|-------|
-| **Unabated gas (no removals)** | **Counterfactual — fossil status quo, no decarbonisation** |
+| **Unabated OCGT (no removals)** | **Counterfactual — fossil status quo, no decarbonisation** |
 | Green H2 → OCGT | ETC reference |
 | Green H2 → CCGT | ETC sensitivity |
 | CH4 + CCS → CCGT | ETC reference |
-| Unabated gas + carbon-removal offset | ETC sensitivity |
+| Unabated OCGT + carbon-removal offset | ETC sensitivity |
 | **Solar → e-methane (DAC CO2) → CCGT** | Novel, not covered in ETC report |
 | **Solar → e-methane (Biogenic CO2) → CCGT** | Novel variant |
 | **Solar → e-methane (Point-source CO2) → CCGT** | Novel variant |
@@ -71,8 +71,8 @@ The model reproduces ETC Exhibit 1.40 (Scenario A: 20% electrolyser utilisation,
 
 Other pathways at Ex-China 2050 defaults sit inside ETC ranges:
 - CH4 + CCS → CCGT (10% util): ~$264/MWh vs ETC $200–270
-- Unabated gas + $50/t removal (5% util): ~$272/MWh vs ETC $215–300
-- Unabated gas + $200/t removal: ~$347/MWh vs ETC $270–380
+- Unabated OCGT + $50/t removal (5% util): ~$272/MWh vs ETC $215–300
+- Unabated OCGT + $200/t removal: ~$347/MWh vs ETC $270–380
 
 ## Default assumptions — what comes from ETC vs supplementary
 
