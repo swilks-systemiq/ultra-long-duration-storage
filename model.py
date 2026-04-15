@@ -264,18 +264,27 @@ def build_h2_ccgt(electrolyser, storage, ccgt, electricity_price, discount_rate=
 
 
 def build_emethane(
-    electrolyser, methanation, storage, ccgt,
-    co2_cost_per_t, electricity_price, co2_source_label, discount_rate=None,
+    electrolyser, methanation, storage, turbine,
+    co2_cost_per_t, electricity_price, co2_source_label,
+    turbine_type: str = "CCGT", discount_rate=None,
 ):
-    """Solar -> electrolyser -> methanation -> gas storage -> CCGT."""
+    """Solar -> electrolyser -> methanation -> gas storage -> {OCGT|CCGT}.
+
+    `turbine_type` must be "OCGT" or "CCGT"; it controls both the stage label
+    shown in cost breakdowns and the pathway name. The `turbine` dict must be
+    the techno-economic preset for the corresponding turbine (with its native
+    efficiency and utilisation — ~40% / 5% for OCGT, ~60% / 10% for CCGT).
+    """
+    if turbine_type not in {"OCGT", "CCGT"}:
+        raise ValueError(f"turbine_type must be 'OCGT' or 'CCGT', got {turbine_type!r}")
     stages = [
         _stage_from_dict("Electrolyser", electrolyser, discount_rate),
         _stage_from_dict("Methanation", methanation, discount_rate),
         _stage_from_dict("CH4 storage", storage, discount_rate, is_storage=True),
-        _stage_from_dict("CCGT", ccgt, discount_rate),
+        _stage_from_dict(turbine_type, turbine, discount_rate),
     ]
     return Pathway(
-        name=f"E-methane ({co2_source_label}) → CCGT",
+        name=f"E-methane ({co2_source_label}) → {turbine_type}",
         stages=stages,
         electricity_input_price=electricity_price,
         stage_1_is_electrolyser=True,

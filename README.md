@@ -12,13 +12,12 @@ advance of a discussion about **solar → e-methane → CCGT** as a novel season
 | Pathway | Notes |
 |---------|-------|
 | **Unabated OCGT (no removals)** | **Counterfactual — fossil status quo, no decarbonisation** |
-| Green H2 → OCGT | ETC reference |
-| Green H2 → CCGT | ETC sensitivity |
+| Green H2 → OCGT *or* CCGT | User-selected turbine in sidebar (default OCGT). OCGT matches ETC reference Scenario A. |
 | CH4 + CCS → CCGT | ETC reference |
 | Unabated OCGT + carbon-removal offset | ETC sensitivity |
-| **Solar → e-methane (DAC CO2) → CCGT** | Novel, not covered in ETC report |
-| **Solar → e-methane (Biogenic CO2) → CCGT** | Novel variant |
-| **Solar → e-methane (Point-source CO2) → CCGT** | Novel variant |
+| **Solar → e-methane (DAC CO2) → OCGT *or* CCGT** | User-selected turbine (default OCGT). **Not in ETC**; OCGT combo especially is a first-order estimate. |
+| **Solar → e-methane (Biogenic CO2) → OCGT *or* CCGT** | User-selected turbine (default OCGT). |
+| **Solar → e-methane (Point-source CO2) → OCGT *or* CCGT** | User-selected turbine (default OCGT). |
 | Iron-air battery (e.g., Form Energy) | Emerging seasonal-storage tech |
 
 Every numeric assumption is overridable from the sidebar; every default carries a source tag in the **Assumptions** tab.
@@ -91,6 +90,19 @@ Other pathways at Ex-China 2050 defaults sit inside ETC ranges:
 | Storage cycle count (12/yr default for H2 and CH4) | User-adjustable default for ultra-long-duration balancing case |
 
 The Assumptions tab in the UI lists every value with its source tag.
+
+## Known limitations / missing assumptions
+
+The model is deliberately simple. The Streamlit UI has an expander summarising the same points, but for reference:
+
+- **E-methane → OCGT is not in ETC.** We pair the existing ETC OCGT preset with a methanation stage; no source calibration exists for this exact combination. Treat results as a first-order estimate.
+- **Turbine utilisation is pathway-independent.** The sidebar's OCGT / CCGT utilisation sliders apply to every pathway that uses that turbine.
+- **Methanation utilisation is pinned to electrolyser utilisation** (same slider). A detached methanation reactor buffering an H2 stockpile is not exposed in the UI.
+- **CO2 costs are per-tonne only.** Compression / transport / delivery to the methanation reactor are assumed bundled into the $/tCO2 price.
+- **No H2/CH4 blending** in turbines. Real units can burn ~30% H2 + 70% CH4; the model treats pathways as single-fuel.
+- **No CCS on combustion for e-fuels.** An "e-methane + post-combustion CCS = net-negative power" variant is not modelled.
+- **Emissions not priced** for the unabated-OCGT counterfactual. It's shown as a cost-only comparator.
+- **H2 / CH4 storage losses** set to zero per ETC's simplification. Multi-month seasonal holds can lose 1–5% in practice.
 
 ## Key sanity checks built into the default view
 

@@ -105,6 +105,21 @@ with st.sidebar:
     )
 
     st.markdown("---")
+    st.markdown("**Turbine for e-fuel pathways**")
+    h2_turbine = st.radio(
+        "Green H2 turbine",
+        options=["OCGT", "CCGT"], index=0, horizontal=True,
+        help=("OCGT: lower CAPEX, 40% eff, 5% util. CCGT: higher CAPEX, 60% eff, 10% util. "
+              "ETC Ex-China 2050 H2-OCGT Scenario A lands around $460/MWh."),
+    )
+    em_turbine = st.radio(
+        "E-methane turbine",
+        options=["OCGT", "CCGT"], index=0, horizontal=True,
+        help=("Note: e-methane → OCGT is NOT in ETC. Lower turbine η means more CH4 — and "
+              "more CO2 feedstock — per MWhe delivered. Expect a large cost jump vs CCGT."),
+    )
+
+    st.markdown("---")
     st.markdown("**Iron-air battery cycles**")
     iron_air_cycles = st.slider(
         "Iron-air cycles per year",
@@ -147,26 +162,32 @@ with st.sidebar:
 
     st.markdown("---")
     st.markdown("**Pathways**")
+    # Pathway labels dynamically reflect the turbine selection above
+    green_h2_label = f"Green H2 → {h2_turbine}"
+    em_dac_label = f"E-methane (DAC) → {em_turbine}"
+    em_bio_label = f"E-methane (Biogenic) → {em_turbine}"
+    em_ps_label = f"E-methane (Point-source) → {em_turbine}"
+    unabated_removal_label = f"Unabated OCGT + ${co2_removal}/t removal"
+
     pathways_to_show = st.multiselect(
         "Select pathways to compare",
         options=[
             "Unabated OCGT (no removals)",
-            "Green H2 → OCGT",
-            "Green H2 → CCGT",
+            green_h2_label,
             "CH4 + CCS → CCGT",
-            f"Unabated OCGT + ${co2_removal}/t removal",
-            "E-methane (DAC) → CCGT",
-            "E-methane (Biogenic) → CCGT",
-            "E-methane (Point-source) → CCGT",
+            unabated_removal_label,
+            em_dac_label,
+            em_bio_label,
+            em_ps_label,
             "Iron-air battery",
         ],
         default=[
             "Unabated OCGT (no removals)",
-            "Green H2 → OCGT",
+            green_h2_label,
             "CH4 + CCS → CCGT",
-            f"Unabated OCGT + ${co2_removal}/t removal",
-            "E-methane (DAC) → CCGT",
-            "E-methane (Biogenic) → CCGT",
+            unabated_removal_label,
+            em_dac_label,
+            em_bio_label,
             "Iron-air battery",
         ],
     )
@@ -183,6 +204,8 @@ def _build_pathways(
     gas_price: float,
     co2_dac: float, co2_biogenic: float, co2_point_source: float, co2_removal: float,
     iron_air_cycles: int = 12,
+    h2_turbine: str = "OCGT",
+    em_turbine: str = "OCGT",
 ):
     preset = get_preset(region, year)
 
@@ -202,18 +225,25 @@ def _build_pathways(
     ccgt_ccs = copy.deepcopy(preset["ccgt"])
     ccgt_ccs["efficiency"] = preset["ccgt"]["efficiency"] * preset["ccs"]["efficiency"]
 
+    # Select the turbine preset dict for each family based on the user's choice
+    h2_turbine_dict = preset["ocgt"] if h2_turbine == "OCGT" else preset["ccgt"]
+    em_turbine_dict = preset["ocgt"] if em_turbine == "OCGT" else preset["ccgt"]
+
     pathways = {}
     pathways["Unabated OCGT (no removals)"] = build_unabated_gas_no_removal(
         preset["ocgt"], gas_price_usd_per_mmbtu=gas_price, discount_rate=discount_rate,
     )
-    pathways["Green H2 → OCGT"] = build_h2_ocgt(
-        preset["electrolyser"], preset["h2_storage"], preset["ocgt"],
-        electricity_price=elec_price, discount_rate=discount_rate,
-    )
-    pathways["Green H2 → CCGT"] = build_h2_ccgt(
-        preset["electrolyser"], preset["h2_storage"], preset["ccgt"],
-        electricity_price=elec_price, discount_rate=discount_rate,
-    )
+    # Green H2 pathway — turbine is user-selected (default OCGT)
+    if h2_turbine == "OCGT":
+        pathways[f"Green H2 → {h2_turbine}"] = build_h2_ocgt(
+            preset["electrolyser"], preset["h2_storage"], h2_turbine_dict,
+            electricity_price=elec_price, discount_rate=discount_rate,
+        )
+    else:
+        pathways[f"Green H2 → {h2_turbine}"] = build_h2_ccgt(
+            preset["electrolyser"], preset["h2_storage"], h2_turbine_dict,
+            electricity_price=elec_price, discount_rate=discount_rate,
+        )
     pathways["CH4 + CCS → CCGT"] = build_ch4_ccs_ccgt(
         ccgt_ccs, preset["ccs"], gas_price_usd_per_mmbtu=gas_price, discount_rate=discount_rate,
     )
@@ -221,20 +251,23 @@ def _build_pathways(
         preset["ocgt"], gas_price_usd_per_mmbtu=gas_price,
         co2_removal_cost=co2_removal, discount_rate=discount_rate,
     )
-    pathways["E-methane (DAC) → CCGT"] = build_emethane(
-        preset["electrolyser"], preset["methanation"], preset["ch4_storage"], preset["ccgt"],
+    # E-methane pathways — turbine is user-selected (default OCGT). Note: e-methane → OCGT
+    # is NOT in ETC; switching from CCGT to OCGT drops pathway efficiency from ~35% to ~23%,
+    # which scales CO2 feedstock and electricity input needs up by ~1.5x.
+    pathways[f"E-methane (DAC) → {em_turbine}"] = build_emethane(
+        preset["electrolyser"], preset["methanation"], preset["ch4_storage"], em_turbine_dict,
         co2_cost_per_t=co2_dac, electricity_price=elec_price, co2_source_label="DAC",
-        discount_rate=discount_rate,
+        turbine_type=em_turbine, discount_rate=discount_rate,
     )
-    pathways["E-methane (Biogenic) → CCGT"] = build_emethane(
-        preset["electrolyser"], preset["methanation"], preset["ch4_storage"], preset["ccgt"],
+    pathways[f"E-methane (Biogenic) → {em_turbine}"] = build_emethane(
+        preset["electrolyser"], preset["methanation"], preset["ch4_storage"], em_turbine_dict,
         co2_cost_per_t=co2_biogenic, electricity_price=elec_price, co2_source_label="Biogenic",
-        discount_rate=discount_rate,
+        turbine_type=em_turbine, discount_rate=discount_rate,
     )
-    pathways["E-methane (Point-source) → CCGT"] = build_emethane(
-        preset["electrolyser"], preset["methanation"], preset["ch4_storage"], preset["ccgt"],
+    pathways[f"E-methane (Point-source) → {em_turbine}"] = build_emethane(
+        preset["electrolyser"], preset["methanation"], preset["ch4_storage"], em_turbine_dict,
         co2_cost_per_t=co2_point_source, electricity_price=elec_price, co2_source_label="Point-source",
-        discount_rate=discount_rate,
+        turbine_type=em_turbine, discount_rate=discount_rate,
     )
     pathways["Iron-air battery"] = build_iron_air(
         preset["iron_air"], electricity_price=elec_price, discount_rate=discount_rate,
@@ -247,6 +280,7 @@ pathways, preset = _build_pathways(
     ocgt_util, ccgt_util, elec_util, storage_cycles,
     gas_price, co2_dac, co2_biogenic, co2_point_source, co2_removal,
     iron_air_cycles,
+    h2_turbine=h2_turbine, em_turbine=em_turbine,
 )
 
 # Filter to selected
@@ -377,22 +411,64 @@ with tab_compare:
         ).sort_values("LCOS ($/MWh delivered)")
         st.dataframe(summary, use_container_width=True)
 
+        # Dynamic efficiency chain for the explanatory blurb
+        _em_t_eff = preset["ocgt"]["efficiency"] if em_turbine == "OCGT" else preset["ccgt"]["efficiency"]
+        _em_pathway_eff = (
+            preset["electrolyser"]["efficiency"] * preset["methanation"]["efficiency"] * _em_t_eff
+        )
+
         with st.expander("Where e-methane wins / loses vs alternatives", expanded=False):
             st.markdown(
-                """
-                **Why e-methane is *worse* than green H2 → OCGT in the default view:**
-                compounded efficiency losses (electrolyser × methanation × CCGT ≈ 35%) combined with
-                CO2 feedstock cost and (new) gas-storage CAPEX. If existing natural-gas storage can be
-                reused at near-zero marginal cost, and biogenic/point-source CO2 is available at <$30/t,
-                e-methane's gap narrows sharply — try **CH4 storage capex → $0.03/kWh** and
-                **CO2 (Biogenic) → $0/t** in the Assumptions tab to see this.
+                f"""
+                **Your current turbine selection:** Green H2 → **{h2_turbine}**, e-methane → **{em_turbine}**.
+                E-methane round-trip efficiency under this setup is
+                **electrolyser × methanation × {em_turbine} ≈ {_em_pathway_eff:.0%}**.
+
+                **Why e-methane is usually worse than green H2 → {h2_turbine}:** compounded efficiency
+                losses combined with CO2 feedstock cost and (new) gas-storage CAPEX. If existing
+                natural-gas storage can be reused at near-zero marginal cost, and biogenic/point-source
+                CO2 is available at <$30/t, e-methane's gap narrows sharply — try **CH4 storage CAPEX → $0.03/kWh**
+                and **CO2 (Biogenic) → $0/t**.
 
                 **Why CH4 + CCS usually wins:** CCGTs are cheaper per kW than electrolysers, their
                 efficiency (60%) beats OCGT (40%), and natural gas at $6/MMBtu is cheap energy. The
                 downside is residual upstream CH4 emissions and imperfect CCS capture — not priced here.
 
                 **The core question in one sentence:** does methanation CAPEX + CO2 cost land below the
-                premium you save by avoiding salt-cavern H2 storage and OCGT peakers?
+                premium you save by avoiding salt-cavern H2 storage and purpose-built peakers?
+                """
+            )
+
+        with st.expander("⚠️ Known limitations / missing assumptions", expanded=False):
+            st.markdown(
+                f"""
+                The model is deliberately simple. If these matter for your decision, override the
+                relevant defaults or treat the result as indicative only.
+
+                - **E-methane → OCGT is not in ETC.** We model it by pairing the existing ETC OCGT
+                  CAPEX/η/utilisation preset with a methanation stage. No source calibration exists
+                  for this specific combination — treat the result as a first-order estimate.
+                - **Turbine utilisation is pathway-independent.** The sidebar's OCGT and CCGT
+                  utilisation sliders apply to every pathway that uses that turbine. In reality,
+                  CH4+CCS and e-methane+CCGT might dispatch differently from an H2 peaker even
+                  under the same system conditions.
+                - **Methanation utilisation is pinned to the electrolyser utilisation slider**
+                  (same value). If you want methanation to run more flexibly (e.g., around a
+                  buffer stock of H2), you need to detach them — not exposed in this UI.
+                - **CO2 costs are per-tonne only.** Compression, transport and delivery to the
+                  methanation reactor are assumed bundled into the $/tCO2 price. For piped DAC
+                  output the assumption is defensible; for distant biogenic/point-source CO2
+                  it may understate.
+                - **No H2/CH4 blending modelled.** Real turbines can burn 30:70 mixtures;
+                  we treat pathways as single-fuel.
+                - **No CCS on combustion for e-fuels.** A user asking about
+                  "e-methane + post-combustion CCS = net-negative power with DAC feedstock"
+                  would need to extend the model.
+                - **Emissions not priced** outside the unabated-gas + removal pathway. We don't
+                  apply a carbon price to the unabated-OCGT counterfactual.
+                - **H2 / CH4 storage losses** (boil-off, leakage, self-discharge) are set to
+                  zero per ETC's simplification. Multi-month seasonal cycles could lose 1–5%
+                  of stored energy depending on containment.
                 """
             )
 
@@ -427,17 +503,19 @@ with tab_sensitivity:
             ccgt_ccs = copy.deepcopy(preset_override["ccgt"])
             ccgt_ccs["efficiency"] = preset_override["ccgt"]["efficiency"] * preset_override["ccs"]["efficiency"]
 
+            # Dynamic turbine selection matches the sidebar choice.
+            h2_t_dict = preset_override["ocgt"] if h2_turbine == "OCGT" else preset_override["ccgt"]
+            em_t_dict = preset_override["ocgt"] if em_turbine == "OCGT" else preset_override["ccgt"]
+
+            h2_builder = build_h2_ocgt if h2_turbine == "OCGT" else build_h2_ccgt
+
             args_map = {
                 "Unabated OCGT (no removals)": lambda: build_unabated_gas_no_removal(
                     preset_override["ocgt"],
                     gas_price_usd_per_mmbtu=overrides.get("globals.gas_price", gas_price),
                     discount_rate=discount_rate),
-                "Green H2 → OCGT": lambda: build_h2_ocgt(
-                    preset_override["electrolyser"], preset_override["h2_storage"], preset_override["ocgt"],
-                    electricity_price=overrides.get("globals.elec_price", elec_price),
-                    discount_rate=discount_rate),
-                "Green H2 → CCGT": lambda: build_h2_ccgt(
-                    preset_override["electrolyser"], preset_override["h2_storage"], preset_override["ccgt"],
+                f"Green H2 → {h2_turbine}": lambda: h2_builder(
+                    preset_override["electrolyser"], preset_override["h2_storage"], h2_t_dict,
                     electricity_price=overrides.get("globals.elec_price", elec_price),
                     discount_rate=discount_rate),
                 "CH4 + CCS → CCGT": lambda: build_ch4_ccs_ccgt(
@@ -449,24 +527,24 @@ with tab_sensitivity:
                     gas_price_usd_per_mmbtu=overrides.get("globals.gas_price", gas_price),
                     co2_removal_cost=overrides.get("globals.co2_removal", co2_removal),
                     discount_rate=discount_rate),
-                "E-methane (DAC) → CCGT": lambda: build_emethane(
+                f"E-methane (DAC) → {em_turbine}": lambda: build_emethane(
                     preset_override["electrolyser"], preset_override["methanation"],
-                    preset_override["ch4_storage"], preset_override["ccgt"],
+                    preset_override["ch4_storage"], em_t_dict,
                     co2_cost_per_t=overrides.get("globals.co2_dac", co2_dac),
                     electricity_price=overrides.get("globals.elec_price", elec_price),
-                    co2_source_label="DAC", discount_rate=discount_rate),
-                "E-methane (Biogenic) → CCGT": lambda: build_emethane(
+                    co2_source_label="DAC", turbine_type=em_turbine, discount_rate=discount_rate),
+                f"E-methane (Biogenic) → {em_turbine}": lambda: build_emethane(
                     preset_override["electrolyser"], preset_override["methanation"],
-                    preset_override["ch4_storage"], preset_override["ccgt"],
+                    preset_override["ch4_storage"], em_t_dict,
                     co2_cost_per_t=overrides.get("globals.co2_biogenic", co2_biogenic),
                     electricity_price=overrides.get("globals.elec_price", elec_price),
-                    co2_source_label="Biogenic", discount_rate=discount_rate),
-                "E-methane (Point-source) → CCGT": lambda: build_emethane(
+                    co2_source_label="Biogenic", turbine_type=em_turbine, discount_rate=discount_rate),
+                f"E-methane (Point-source) → {em_turbine}": lambda: build_emethane(
                     preset_override["electrolyser"], preset_override["methanation"],
-                    preset_override["ch4_storage"], preset_override["ccgt"],
+                    preset_override["ch4_storage"], em_t_dict,
                     co2_cost_per_t=overrides.get("globals.co2_point_source", co2_point_source),
                     electricity_price=overrides.get("globals.elec_price", elec_price),
-                    co2_source_label="Point-source", discount_rate=discount_rate),
+                    co2_source_label="Point-source", turbine_type=em_turbine, discount_rate=discount_rate),
                 "Iron-air battery": lambda: build_iron_air(
                     preset_override["iron_air"],
                     electricity_price=overrides.get("globals.elec_price", elec_price),
@@ -482,16 +560,13 @@ with tab_sensitivity:
                 ("electrolyser.utilisation", preset["electrolyser"]["utilisation"], "Electrolyser utilisation"),
                 ("globals.elec_price", max(elec_price, 0.01), "Input electricity price"),
             ]
-            if "H2" in path_name and "OCGT" in path_name:
+            if path_name.startswith("Green H2"):
+                # Which turbine is actually in play for this H2 pathway
+                tkey = "ocgt" if path_name.endswith("→ OCGT") else "ccgt"
+                tlabel = "OCGT" if tkey == "ocgt" else "CCGT"
                 return common + [
-                    ("ocgt.capex_per_kw", preset["ocgt"]["capex_per_kw"], "OCGT CAPEX"),
-                    ("ocgt.utilisation", preset["ocgt"]["utilisation"], "OCGT utilisation"),
-                    ("h2_storage.capex_per_kwh", preset["h2_storage"]["capex_per_kwh"], "H2 storage CAPEX"),
-                ]
-            if "H2" in path_name and "CCGT" in path_name:
-                return common + [
-                    ("ccgt.capex_per_kw", preset["ccgt"]["capex_per_kw"], "CCGT CAPEX"),
-                    ("ccgt.utilisation", preset["ccgt"]["utilisation"], "CCGT utilisation"),
+                    (f"{tkey}.capex_per_kw", preset[tkey]["capex_per_kw"], f"{tlabel} CAPEX"),
+                    (f"{tkey}.utilisation", preset[tkey]["utilisation"], f"{tlabel} utilisation"),
                     ("h2_storage.capex_per_kwh", preset["h2_storage"]["capex_per_kwh"], "H2 storage CAPEX"),
                 ]
             if path_name == "Unabated OCGT (no removals)":
@@ -521,13 +596,16 @@ with tab_sensitivity:
                     ("globals.co2_biogenic", co2_biogenic) if "Biogenic" in path_name else
                     ("globals.co2_point_source", co2_point_source)
                 )
+                tkey = "ocgt" if path_name.endswith("→ OCGT") else "ccgt"
+                tlabel = "OCGT" if tkey == "ocgt" else "CCGT"
+                co2_src = path_name.split("(")[1].split(")")[0]
                 return common + [
                     ("methanation.capex_per_kw", preset["methanation"]["capex_per_kw"], "Methanation CAPEX"),
                     ("methanation.efficiency", preset["methanation"]["efficiency"], "Methanation η"),
                     ("ch4_storage.capex_per_kwh", preset["ch4_storage"]["capex_per_kwh"], "CH4 storage CAPEX"),
                     ("ch4_storage.cycles_per_year", preset["ch4_storage"]["cycles_per_year"], "CH4 storage cycles/yr"),
-                    ("ccgt.capex_per_kw", preset["ccgt"]["capex_per_kw"], "CCGT CAPEX"),
-                    (co2_key[0], co2_key[1], f"CO2 cost ({path_name.split('(')[1].rstrip(') → CCGT')})"),
+                    (f"{tkey}.capex_per_kw", preset[tkey]["capex_per_kw"], f"{tlabel} CAPEX"),
+                    (co2_key[0], co2_key[1], f"CO2 cost ({co2_src})"),
                 ]
             if "Iron-air" in path_name:
                 return [
@@ -658,17 +736,17 @@ with tab_heatmap:
                 return build_unabated_gas_no_removal(preset_h["ocgt"],
                                                     gas_price_usd_per_mmbtu=overrides["gas_price"],
                                                     discount_rate=discount_rate)
-            if h_path == "Green H2 → OCGT":
-                return build_h2_ocgt(preset_h["electrolyser"], preset_h["h2_storage"], preset_h["ocgt"],
-                                     electricity_price=overrides["elec_price"], discount_rate=discount_rate)
-            if h_path == "Green H2 → CCGT":
-                return build_h2_ccgt(preset_h["electrolyser"], preset_h["h2_storage"], preset_h["ccgt"],
-                                     electricity_price=overrides["elec_price"], discount_rate=discount_rate)
+            if h_path.startswith("Green H2"):
+                t_is_ocgt = h_path.endswith("→ OCGT")
+                t_dict = preset_h["ocgt"] if t_is_ocgt else preset_h["ccgt"]
+                builder = build_h2_ocgt if t_is_ocgt else build_h2_ccgt
+                return builder(preset_h["electrolyser"], preset_h["h2_storage"], t_dict,
+                               electricity_price=overrides["elec_price"], discount_rate=discount_rate)
             if h_path == "CH4 + CCS → CCGT":
                 return build_ch4_ccs_ccgt(ccgt_ccs2, preset_h["ccs"],
                                           gas_price_usd_per_mmbtu=overrides["gas_price"],
                                           discount_rate=discount_rate)
-            if h_path.startswith("Unabated"):
+            if h_path.startswith("Unabated") and "removal" in h_path:
                 return build_unabated_gas_removal(preset_h["ocgt"], gas_price_usd_per_mmbtu=overrides["gas_price"],
                                                   co2_removal_cost=co2_removal, discount_rate=discount_rate)
             if "E-methane" in h_path:
@@ -676,11 +754,15 @@ with tab_heatmap:
                     overrides["co2_biogenic"] if "Biogenic" in h_path else overrides["co2_point_source"]
                 )
                 label = "DAC" if "DAC" in h_path else ("Biogenic" if "Biogenic" in h_path else "Point-source")
+                t_is_ocgt = h_path.endswith("→ OCGT")
+                t_dict = preset_h["ocgt"] if t_is_ocgt else preset_h["ccgt"]
+                t_label = "OCGT" if t_is_ocgt else "CCGT"
                 return build_emethane(preset_h["electrolyser"], preset_h["methanation"],
-                                      preset_h["ch4_storage"], preset_h["ccgt"],
+                                      preset_h["ch4_storage"], t_dict,
                                       co2_cost_per_t=co2_val,
                                       electricity_price=overrides["elec_price"],
-                                      co2_source_label=label, discount_rate=discount_rate)
+                                      co2_source_label=label, turbine_type=t_label,
+                                      discount_rate=discount_rate)
             if h_path == "Iron-air battery":
                 return build_iron_air(preset_h["iron_air"], electricity_price=overrides["elec_price"],
                                       discount_rate=discount_rate)
