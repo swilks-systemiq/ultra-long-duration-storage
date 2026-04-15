@@ -290,13 +290,85 @@ selected = {k: v for k, v in pathways.items() if k in pathways_to_show}
 # ---------------------------------------------------------------------------
 # Main tabs
 # ---------------------------------------------------------------------------
-tab_compare, tab_flows, tab_sensitivity, tab_heatmap, tab_assumptions = st.tabs(
-    ["📊 LCOS comparison", "🔀 Pathway diagrams", "🎯 Sensitivity (tornado)", "🔥 2D heatmap", "📋 Assumptions"]
+tab_compare, tab_flows, tab_sensitivity, tab_heatmap, tab_method, tab_assumptions = st.tabs(
+    ["📊 LCOS comparison", "🔀 Pathway diagrams", "🎯 Sensitivity (tornado)", "🔥 2D heatmap", "🧮 LCOS method", "📋 Assumptions"]
 )
 
 
 # ---------------------------------------------------------------------------
-# Tab 1 — LCOS comparison bar chart
+# Tab 1 — LCOS method and input definitions
+# ---------------------------------------------------------------------------
+with tab_method:
+    st.subheader("How LCOS is calculated")
+    st.markdown(
+        """
+        <style>
+        .katex-display {
+            text-align: left !important;
+            margin: 0.25rem 0 1rem 0 !important;
+        }
+        .katex-display > .katex {
+            text-align: left !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown("The model reports **levelised cost of storage (LCOS)** in **$ per MWh of delivered electricity**:")
+    st.latex(r"LCOS = \frac{\sum_t \frac{CAPEX_t + OPEX_t + input\ costs_t}{(1+r)^t}}{\sum_t \frac{Electricity\ delivered_t}{(1+r)^t}}")
+    st.markdown(
+        "In plain English: we add up all discounted costs over the asset life and divide by all "
+        "discounted electricity delivered to the grid."
+    )
+
+    st.markdown("For a multi-step pathway, the model cascades efficiency through each stage:")
+    st.latex(r"\eta_{pathway} = \prod_i \eta_i")
+    st.markdown("So the upstream electricity or fuel needed per MWh delivered is:")
+    st.latex(r"Input\ needed = \frac{1}{\eta_{pathway}}")
+
+    st.markdown(
+        """
+        **What goes into the LCOS number**
+
+        - `CAPEX`: annualised plant or storage investment, converted into `$ / MWh delivered`
+        - `Fixed OPEX`: annual operating costs that scale with capacity
+        - `Variable OPEX`: running costs that scale with output
+        - `Electricity input`: grid power fed into electrolysers or batteries
+        - `Fuel`: natural-gas input for fossil pathways
+        - `CO2 feedstock`: CO2 purchased for e-methane synthesis
+        - `Carbon removal offset`: offset cost for the unabated OCGT + removals pathway
+        """
+    )
+
+    st.markdown(
+        """
+        **Input definitions**
+
+        - `Discount rate`: financing assumption used to annualise CAPEX
+        - `Input electricity price`: cost of electricity going into electrolysers or iron-air charging
+        - `OCGT / CCGT utilisation`: annual capacity factor of the turbine block
+        - `Electrolyser utilisation`: annual capacity factor for H2 production
+        - `H2 / CH4 storage cycles per year`: how often the underground storage asset turns over each year
+        - `Iron-air cycles per year`: how often the battery fully cycles each year
+        - `Natural gas price`: fuel input price for fossil methane pathways
+        - `DAC / biogenic / point-source CO2 cost`: feedstock price for e-methane pathways
+        - `Carbon removal cost for offsets`: cost used only for the unabated OCGT + removals case
+        """
+    )
+
+    st.markdown(
+        """
+        **How to interpret the result**
+
+        - Lower LCOS means cheaper delivered electricity from that pathway under the chosen assumptions.
+        - A pathway with lower efficiency can still win if it uses cheaper storage, turbines, or feedstocks.
+        - Storage cycle assumptions matter a lot because they spread storage CAPEX over more or fewer MWh delivered.
+        """
+    )
+
+
+# ---------------------------------------------------------------------------
+# Tab 2 — LCOS comparison bar chart
 # ---------------------------------------------------------------------------
 with tab_compare:
     st.subheader("Levelised cost of storage, $ per MWh of delivered electricity")
@@ -343,6 +415,10 @@ with tab_compare:
             return "Other"
 
         df["Category"] = df["Component"].apply(classify)
+        # CAPEX vs OPEX classification — drives segment border style (solid vs dashed).
+        df["CostType"] = df["Component"].apply(
+            lambda c: "CAPEX" if "CAPEX" in c else "OPEX"
+        )
 
         # Row ordering for the horizontal bar chart:
         #  1. "Unabated OCGT (no removals)" pinned to the TOP as the fossil counterfactual.
@@ -373,24 +449,128 @@ with tab_compare:
             "Other": "#cccccc",
         }
 
-        fig = px.bar(
-            df, x="Cost ($/MWh)", y="Pathway", color="Category",
-            orientation="h", text_auto=".0f",
-            color_discrete_map=color_map,
-            hover_data={"Component": True, "Cost ($/MWh)": ":.1f"},
-            height=max(400, 55 * len(selected)),
-        )
+        # Build bars manually so we can apply per-segment borders.
+        # Plotly bar marker.line supports width+color but NOT dash, so OPEX dashed
+        # borders are drawn as shape overlays after the bars are stacked.
+        category_order = list(color_map.keys())
+        present_cats = [c for c in category_order if c in df["Category"].unique()]
+        BORDER_COLOR = "black"
+        BORDER_WIDTH = 1.2
+
+        fig = go.Figure()
+        trace_order = []  # list of (cat, ct, series) in stacking order per pathway
+        for cat in present_cats:
+            for ct in ["CAPEX", "OPEX"]:
+                subset = df[(df["Category"] == cat) & (df["CostType"] == ct)]
+                if subset.empty:
+                    continue
+                grouped = (
+                    subset.groupby("Pathway", observed=True)["Cost ($/MWh)"].sum()
+                    .reindex(bottom_to_top, fill_value=0.0)
+                )
+                trace_order.append((cat, ct, grouped))
+                # Solid border for CAPEX from marker.line; OPEX has no marker border
+                # (the dashed border is drawn separately as a rect shape overlay).
+                line_kwargs = (
+                    dict(color=BORDER_COLOR, width=BORDER_WIDTH)
+                    if ct == "CAPEX" else dict(width=0)
+                )
+
+                def _hover_for(pw, _sub=subset):
+                    rows = _sub[_sub["Pathway"] == pw]
+                    return "<br>".join(
+                        f"  {r['Component']}: ${r['Cost ($/MWh)']:.1f}"
+                        for _, r in rows.iterrows()
+                    )
+                hover = [_hover_for(pw) for pw in grouped.index]
+
+                fig.add_trace(go.Bar(
+                    y=list(grouped.index),
+                    x=list(grouped.values),
+                    orientation="h",
+                    name=f"{cat} ({ct})",
+                    legendgroup=cat,
+                    showlegend=False,
+                    marker=dict(color=color_map[cat], line=line_kwargs),
+                    text=[f"{v:.0f}" if v > 0 else "" for v in grouped.values],
+                    textposition="auto",
+                    customdata=[[h] for h in hover],
+                    hovertemplate=(
+                        f"<b>{cat} — {ct}</b><br>"
+                        "%{y}<br>"
+                        "Subtotal: $%{x:.1f}/MWh"
+                        "<br>%{customdata[0]}<extra></extra>"
+                    ),
+                ))
+
+        # Overlay dashed borders on every OPEX segment.
+        # Category axis uses integer indices (0..N-1) for shape y-refs; with bargap=0.25,
+        # each bar occupies 0.75 of its category slot so half-height ≈ 0.375.
+        bar_half_height = 0.375
+        for i, pathway in enumerate(bottom_to_top):
+            cumulative = 0.0
+            for cat, ct, grouped in trace_order:
+                width = float(grouped.get(pathway, 0.0))
+                if width <= 0:
+                    cumulative += width
+                    continue
+                if ct == "OPEX":
+                    fig.add_shape(
+                        type="rect", xref="x", yref="y",
+                        x0=cumulative, x1=cumulative + width,
+                        y0=i - bar_half_height, y1=i + bar_half_height,
+                        line=dict(color=BORDER_COLOR, width=BORDER_WIDTH, dash="3px,2px"),
+                        fillcolor="rgba(0,0,0,0)",
+                        layer="above",
+                    )
+                cumulative += width
+
+        # Category colour legend — one swatch per present category
+        for cat in present_cats:
+            fig.add_trace(go.Bar(
+                y=[None], x=[None],
+                name=cat,
+                marker=dict(color=color_map[cat], line=dict(width=0)),
+                showlegend=True, legendgroup=cat,
+            ))
+
+        # Border-style legend — scatter line traces so the dash pattern renders
+        fig.add_trace(go.Scatter(
+            x=[None], y=[None], mode="lines",
+            line=dict(color=BORDER_COLOR, width=2, dash="solid"),
+            name="CAPEX (solid border)",
+            legendgroup="__border", showlegend=True,
+        ))
+        fig.add_trace(go.Scatter(
+            x=[None], y=[None], mode="lines",
+            line=dict(color=BORDER_COLOR, width=2, dash="3px,2px"),
+            name="OPEX (dashed border)",
+            legendgroup="__border", showlegend=True,
+        ))
+
         max_total = float(totals.max())
         label_offset = max(14.0, 0.025 * max_total)
         right_padding = max(45.0, 0.05 * max_total)
         fig.update_layout(
+            barmode="stack",
             xaxis_title="$ per MWh delivered",
             yaxis_title="",
             legend_title="",
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="left",
+                x=0,
+                traceorder="normal",
+                entrywidth=145,
+                entrywidthmode="pixels",
+            ),
             bargap=0.25,
             margin=dict(r=110),
             yaxis=dict(categoryorder="array", categoryarray=bottom_to_top),
             xaxis=dict(range=[0, max_total + right_padding]),
+            height=max(400, 55 * len(selected)),
         )
 
         # Add total annotations at the bar end
@@ -427,8 +607,8 @@ with tab_compare:
                 **Why e-methane is usually worse than green H2 → {h2_turbine}:** compounded efficiency
                 losses combined with CO2 feedstock cost and (new) gas-storage CAPEX. If existing
                 natural-gas storage can be reused at near-zero marginal cost, and biogenic/point-source
-                CO2 is available at <$30/t, e-methane's gap narrows sharply — try **CH4 storage CAPEX → $0.03/kWh**
-                and **CO2 (Biogenic) → $0/t**.
+                CO2 is available at <$30/t, e-methane's gap narrows sharply if you set **CH4 storage CAPEX
+                to $0.03/kWh** and **CO2 (Biogenic) to $0/t**.
 
                 **Why CH4 + CCS usually wins:** CCGTs are cheaper per kW than electrolysers, their
                 efficiency (60%) beats OCGT (40%), and natural gas at $6/MMBtu is cheap energy. The
@@ -474,7 +654,7 @@ with tab_compare:
 
 
 # ---------------------------------------------------------------------------
-# Tab — Pathway diagrams (simplified flow charts)
+# Tab 3 — Pathway diagrams (simplified flow charts)
 # ---------------------------------------------------------------------------
 with tab_flows:
     st.subheader("Pathway flow diagrams")
@@ -635,7 +815,7 @@ with tab_flows:
 
 
 # ---------------------------------------------------------------------------
-# Tab 2 — Sensitivity (tornado)
+# Tab 4 — Sensitivity (tornado)
 # ---------------------------------------------------------------------------
 with tab_sensitivity:
     st.subheader("Sensitivity — ±30% swing on key inputs")
@@ -957,7 +1137,7 @@ with tab_heatmap:
 
 
 # ---------------------------------------------------------------------------
-# Tab 4 — Assumptions audit trail
+# Tab 6 — Assumptions audit trail
 # ---------------------------------------------------------------------------
 with tab_assumptions:
     st.subheader("Assumption audit trail")
