@@ -84,7 +84,7 @@ Other pathways at Ex-China 2050 defaults sit inside ETC ranges:
 | CCGT CAPEX, OPEX, efficiency | ETC Exhibit 1.42 |
 | CCS CAPEX, parasitic efficiency penalty | ETC + BNEF (2025) LCOE Data Viewer |
 | Natural gas price ($6/MMBtu) | ETC Section 1.5.1 |
-| DAC CO2 cost ($200/t 2050) | ETC *Mind the Gap* (2021) |
+| DAC CO2 cost (2035: $510/t, 2050: $300/t) | Year-dependent; informed by current project-level quotes (2035) and ETC *Mind the Gap* (2021) trajectory toward 2050 |
 | **Methanation CAPEX & efficiency** | Supplementary — IEA (2020); academic TEA literature |
 | **CH4 (gas) storage CAPEX & cycles** | Supplementary — EIA/FERC-linked underground gas-storage cost data |
 | **Iron-air CAPEX, efficiency** | Supplementary — Form Energy public targets; BNEF (2024) Long-Duration Energy Storage Survey |

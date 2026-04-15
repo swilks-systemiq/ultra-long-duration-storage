@@ -23,6 +23,7 @@ from defaults import (
     YEARS,
     CO2_SOURCES,
     GLOBAL_DEFAULTS,
+    DAC_USD_PER_T_BY_YEAR,
 )
 from model import (
     build_h2_ocgt,
@@ -78,12 +79,12 @@ with st.sidebar:
     st.markdown("**Turbine utilisation**")
     ocgt_util = st.slider(
         "OCGT utilisation (%)",
-        min_value=1, max_value=15, value=5, step=1,
+        min_value=0, max_value=50, value=5, step=1,
         help="Capacity factor for OCGT peakers. ETC default 5% for ultra-long balancing.",
     ) / 100.0
     ccgt_util = st.slider(
         "CCGT utilisation (%)",
-        min_value=1, max_value=20, value=10, step=1,
+        min_value=0, max_value=50, value=10, step=1,
         help="ETC default 10% for CCGT + CCS.",
     ) / 100.0
 
@@ -107,7 +108,7 @@ with st.sidebar:
     st.markdown("**Iron-air battery cycles**")
     iron_air_cycles = st.slider(
         "Iron-air cycles per year",
-        min_value=5, max_value=60, value=15, step=1,
+        min_value=5, max_value=60, value=12, step=1,
         help=("100h-duration iron-air is cycle-constrained: a full cycle is ~200h, "
               "so even at 100% availability max ~45 cycles/yr; 15/yr is realistic "
               "(Liebreich/Form Energy analysis)."),
@@ -122,8 +123,13 @@ with st.sidebar:
     )
     co2_dac = st.slider(
         "DAC CO2 cost ($/t)",
-        min_value=50, max_value=600, value=200, step=25,
-        help="ETC 2050 optimistic: $100–200/t per Mind the Gap.",
+        min_value=50, max_value=800,
+        value=int(DAC_USD_PER_T_BY_YEAR[year]), step=10,
+        key=f"co2_dac_{year}",   # resets slider when year selector changes
+        help=(
+            "Year-dependent default: 2035 = $510/t, 2050 = $300/t. "
+            "Override freely; ETC Mind the Gap (2021) uses $100–300/t 2050."
+        ),
     )
     co2_biogenic = st.slider(
         "Biogenic CO2 cost ($/t)",
@@ -176,7 +182,7 @@ def _build_pathways(
     ocgt_util: float, ccgt_util: float, elec_util: float, storage_cycles: float,
     gas_price: float,
     co2_dac: float, co2_biogenic: float, co2_point_source: float, co2_removal: float,
-    iron_air_cycles: int = 15,
+    iron_air_cycles: int = 12,
 ):
     preset = get_preset(region, year)
 
@@ -340,21 +346,27 @@ with tab_compare:
             hover_data={"Component": True, "Cost ($/MWh)": ":.1f"},
             height=max(400, 55 * len(selected)),
         )
+        max_total = float(totals.max())
+        label_offset = max(14.0, 0.025 * max_total)
+        right_padding = max(45.0, 0.05 * max_total)
         fig.update_layout(
             xaxis_title="$ per MWh delivered",
             yaxis_title="",
             legend_title="",
             bargap=0.25,
+            margin=dict(r=110),
             yaxis=dict(categoryorder="array", categoryarray=bottom_to_top),
+            xaxis=dict(range=[0, max_total + right_padding]),
         )
 
         # Add total annotations at the bar end
         for name, total in totals.items():
             fig.add_annotation(
-                x=total + 10, y=name,
+                x=total + label_offset, y=name,
                 text=f"<b>${total:.0f}</b>",
                 showarrow=False,
                 font=dict(size=12),
+                xanchor="left",
             )
 
         st.plotly_chart(fig, use_container_width=True)

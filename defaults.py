@@ -377,7 +377,7 @@ IRON_AIR = {
         "capex_per_kwh": 30.0,
         "fixed_opex_pct": 0.015,
         "efficiency": 0.45,
-        "cycles_per_year": 15,       # 100h duration + ~50% availability; cycle-limited
+        "cycles_per_year": 12,       # 100h duration + ~50% availability; cycle-limited
         "lifetime_years": 20,
         "discount_rate": 0.08,
         "source": "Supplementary: Form Energy disclosures (~$33/kWh); Liebreich (Cleaning Up ep.144) on cycle constraint",
@@ -386,7 +386,7 @@ IRON_AIR = {
         "capex_per_kwh": 22.0,
         "fixed_opex_pct": 0.015,
         "efficiency": 0.50,
-        "cycles_per_year": 15,        # cycle constraint is physics, not cost
+        "cycles_per_year": 12,        # cycle constraint is physics, not cost
         "lifetime_years": 20,
         "discount_rate": 0.08,
         "source": "Supplementary: Form Energy 2030+ targets ($20-25/kWh); cycle limit unchanged",
@@ -395,7 +395,7 @@ IRON_AIR = {
         "capex_per_kwh": 33.0,        # Form Energy Maine project implied cost
         "fixed_opex_pct": 0.015,
         "efficiency": 0.45,
-        "cycles_per_year": 15,
+        "cycles_per_year": 12,
         "lifetime_years": 20,
         "discount_rate": 0.08,
         "source": "Supplementary: Form Energy Maine project (~$1bn / 30 GWh = $33/kWh)",
@@ -404,7 +404,7 @@ IRON_AIR = {
         "capex_per_kwh": 25.0,
         "fixed_opex_pct": 0.015,
         "efficiency": 0.50,
-        "cycles_per_year": 15,
+        "cycles_per_year": 12,
         "lifetime_years": 20,
         "discount_rate": 0.08,
         "source": "Supplementary: Form Energy 2030+ cost target; cycles still physics-limited",
@@ -414,10 +414,17 @@ IRON_AIR = {
 # ---------------------------------------------------------------------------
 # Global / economy-wide assumptions
 # ---------------------------------------------------------------------------
+# DAC costs are year-dependent. Defaults reflect current project-level quotes
+# (2035: ~$510/t) trending toward mature-technology estimates (2050: ~$300/t).
+DAC_USD_PER_T_BY_YEAR = {
+    2035: 510.0,
+    2050: 300.0,
+}
+
 GLOBAL_DEFAULTS = {
     "gas_price_usd_per_mmbtu": 6.0,                 # ETC Section 1.5.1 / Exhibit 1.29 note
     "electricity_input_price_usd_per_mwh": 40.0,    # ETC scenario B for illustration
-    "co2_dac_usd_per_t": 200.0,                     # ETC Mind the Gap 2050 optimistic
+    "co2_dac_usd_per_t": DAC_USD_PER_T_BY_YEAR[2050],   # overridden per year in get_preset()
     "co2_biogenic_usd_per_t": 30.0,                 # Biogenic CO2 (ethanol/biogas upgrading)
     "co2_point_source_usd_per_t": 50.0,             # Industrial point-source captured CO2
     "co2_removal_usd_per_t": 200.0,                 # DACCS for offsetting residual emissions
@@ -438,6 +445,11 @@ CO2_SOURCES = {
 def get_preset(region: str, year: int) -> dict:
     """Return a deep-copy dict of all tech parameters for the chosen region/year."""
     key = (region, year)
+    globals_copy = deepcopy(GLOBAL_DEFAULTS)
+    # Set year-dependent DAC cost
+    globals_copy["co2_dac_usd_per_t"] = DAC_USD_PER_T_BY_YEAR.get(
+        year, GLOBAL_DEFAULTS["co2_dac_usd_per_t"]
+    )
     return {
         "electrolyser": deepcopy(ELECTROLYSER[key]),
         "methanation": deepcopy(METHANATION[key]),
@@ -447,7 +459,7 @@ def get_preset(region: str, year: int) -> dict:
         "ccgt": deepcopy(CCGT[key]),
         "ccs": deepcopy(CCS[key]),
         "iron_air": deepcopy(IRON_AIR[key]),
-        "globals": deepcopy(GLOBAL_DEFAULTS),
+        "globals": globals_copy,
     }
 
 
