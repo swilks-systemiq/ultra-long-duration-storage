@@ -1,0 +1,24 @@
+# Copyrighted reference material — NOT redistributable
+*.pdf
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
+
+# Local Claude / tooling state (keep launch.json, drop anything else)
+.claude/settings.local.json
