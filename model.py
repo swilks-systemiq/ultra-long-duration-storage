@@ -314,6 +314,28 @@ def build_unabated_gas_removal(ocgt, gas_price_usd_per_mmbtu, co2_removal_cost, 
     )
 
 
+def build_unabated_gas_no_removal(ocgt, gas_price_usd_per_mmbtu, discount_rate=None):
+    """
+    Fossil status-quo counterfactual: unabated gas turbine, no carbon removal offset.
+
+    No CO2 cost line; emissions are externalised. This is the 'do nothing to decarbonise'
+    comparator that every other pathway must beat on a delivered-electricity cost basis
+    before even considering climate externalities.
+    """
+    MMBTU_PER_MWH = 3.412
+    fuel_cost_per_mwh_elec = gas_price_usd_per_mmbtu * MMBTU_PER_MWH / max(ocgt["efficiency"], 1e-6)
+    turbine = _stage_from_dict("OCGT", ocgt, discount_rate)
+    turbine.fuel_cost_per_mwh_out = fuel_cost_per_mwh_elec
+    emissions_t_per_mwhe = 0.2 / max(ocgt["efficiency"], 1e-6)
+    p = Pathway(
+        name="Unabated gas (no removals)",
+        stages=[turbine],
+    )
+    # Attach emissions info for display (not costed)
+    p.co2_emitted_t_per_mwhe = emissions_t_per_mwhe
+    return p
+
+
 def build_iron_air(battery, electricity_price, discount_rate=None):
     """
     Iron-air battery: a single electrochemical storage stage.

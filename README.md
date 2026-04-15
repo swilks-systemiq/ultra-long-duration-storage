@@ -1,16 +1,17 @@
-# Ultra-Long Duration Storage — Techno-Economic Model
+# Seasonal Storage — Techno-Economic Model
 
-Interactive Streamlit model to compare seasonal / ultra-long duration (50h+) storage
-pathways on a like-for-like LCOS basis, using methodology consistent with
+Interactive Streamlit model to compare seasonal (50h+) storage pathways on a
+like-for-like LCOS basis, using methodology consistent with
 **ETC (2025) *Power Systems Transformation*** (Box E, Exhibits 1.32–1.42).
 
-Built specifically to pressure-test the ETC conclusions on LDES & seasonal storage in
+Built specifically to pressure-test the ETC conclusions on seasonal storage in
 advance of a discussion about **solar → e-methane → CCGT** as a novel seasonal pathway.
 
 ## Pathways compared
 
 | Pathway | Notes |
 |---------|-------|
+| **Unabated gas (no removals)** | **Counterfactual — fossil status quo, no decarbonisation** |
 | Green H2 → OCGT | ETC reference |
 | Green H2 → CCGT | ETC sensitivity |
 | CH4 + CCS → CCGT | ETC reference |
@@ -18,7 +19,7 @@ advance of a discussion about **solar → e-methane → CCGT** as a novel season
 | **Solar → e-methane (DAC CO2) → CCGT** | Novel, not covered in ETC report |
 | **Solar → e-methane (Biogenic CO2) → CCGT** | Novel variant |
 | **Solar → e-methane (Point-source CO2) → CCGT** | Novel variant |
-| Iron-air battery (e.g., Form Energy) | Emerging LDES |
+| Iron-air battery (e.g., Form Energy) | Emerging seasonal-storage tech |
 
 Every numeric assumption is overridable from the sidebar; every default carries a source tag in the **Assumptions** tab.
 
@@ -86,7 +87,7 @@ Other pathways at Ex-China 2050 defaults sit inside ETC ranges:
 | DAC CO2 cost ($200/t 2050) | ETC *Mind the Gap* (2021) |
 | **Methanation CAPEX & efficiency** | Supplementary — IEA (2020); academic TEA literature |
 | **CH4 (gas) storage CAPEX & cycles** | Supplementary — IEA/EIA gas-storage cost data |
-| **Iron-air CAPEX, efficiency** | Supplementary — Form Energy public targets; BNEF (2024) LDES Survey |
+| **Iron-air CAPEX, efficiency** | Supplementary — Form Energy public targets; BNEF (2024) Long-Duration Energy Storage Survey |
 | Seasonal cycle count (1.5/yr for CH4) | Supplementary — summer-to-winter assumption |
 
 The Assumptions tab in the UI lists every value with its source tag.
