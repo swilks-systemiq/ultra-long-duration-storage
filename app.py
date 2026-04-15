@@ -539,11 +539,10 @@ with tab_flows:
     diagrams["Unabated OCGT (no removals)"] = _dot(
         nodes=[
             ("gas",  f"Natural gas\\n${gas_price:.1f}/MMBtu", "feedstock"),
-            ("ocgt", f"OCGT\\nη={preset['ocgt']['efficiency']:.0%}", "turbine"),
+            ("ocgt", f"OCGT\\nη={preset['ocgt']['efficiency']:.0%}\\n(CO2 vented, not priced)", "turbine"),
             ("out",  "Electricity\\ndelivered", "output"),
-            ("co2",  "CO2 vented\\n(not priced)", "output"),
         ],
-        edges=[("gas", "ocgt", ""), ("ocgt", "out", ""), ("ocgt", "co2", "")],
+        edges=[("gas", "ocgt", ""), ("ocgt", "out", "")],
     )
 
     diagrams[f"Unabated OCGT + ${int(co2_removal)}/t removal"] = _dot(
