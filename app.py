@@ -174,6 +174,7 @@ with st.sidebar:
     pathways_to_show = st.multiselect(
         "Select pathways to compare",
         options=[
+            "Existing Unabated OCGT (no removals)",
             "Unabated OCGT (no removals)",
             green_h2_label,
             "CH4 + CCS → CCGT",
@@ -184,6 +185,7 @@ with st.sidebar:
             "Iron-air battery",
         ],
         default=[
+            "Existing Unabated OCGT (no removals)",
             "Unabated OCGT (no removals)",
             green_h2_label,
             "CH4 + CCS → CCGT",
@@ -232,8 +234,16 @@ def _build_pathways(
     em_turbine_dict = preset["ocgt"] if em_turbine == "OCGT" else preset["ccgt"]
 
     pathways = {}
+    # "Existing" OCGT — no turbine CAPEX (already built/paid for), OPEX + fuel + storage only
+    existing_ocgt = copy.deepcopy(preset["ocgt"])
+    existing_ocgt["capex_per_kw"] = 0
+    pathways["Existing Unabated OCGT (no removals)"] = build_unabated_gas_no_removal(
+        existing_ocgt, gas_price_usd_per_mmbtu=gas_price, discount_rate=discount_rate,
+        ch4_storage=preset["ch4_storage"],
+    )
     pathways["Unabated OCGT (no removals)"] = build_unabated_gas_no_removal(
         preset["ocgt"], gas_price_usd_per_mmbtu=gas_price, discount_rate=discount_rate,
+        ch4_storage=preset["ch4_storage"],
     )
     # Green H2 pathway — turbine is user-selected (default OCGT)
     if h2_turbine == "OCGT":
@@ -252,6 +262,7 @@ def _build_pathways(
     pathways[f"Unabated OCGT + ${int(co2_removal)}/t removal"] = build_unabated_gas_removal(
         preset["ocgt"], gas_price_usd_per_mmbtu=gas_price,
         co2_removal_cost=co2_removal, discount_rate=discount_rate,
+        ch4_storage=preset["ch4_storage"],
     )
     # E-CH4 pathways — turbine is user-selected (default OCGT). Note: E-CH4 → OCGT
     # is NOT in ETC; switching from CCGT to OCGT drops pathway efficiency from ~35% to ~23%,
@@ -428,13 +439,17 @@ with tab_compare:
         # Plotly's horizontal-bar y-axis places the FIRST category in categoryarray at the
         # bottom, so we build the list in reverse (bottom -> top) and hand it over explicitly.
         totals = df.groupby("Pathway")["Cost ($/MWh)"].sum().sort_values()
-        counterfactual = "Unabated OCGT (no removals)"
-        decarb_sorted_ascending = [p for p in totals.index if p != counterfactual]
+        counterfactuals = [
+            "Unabated OCGT (no removals)",
+            "Existing Unabated OCGT (no removals)",
+        ]
+        decarb_sorted_ascending = [p for p in totals.index if p not in counterfactuals]
         # Bottom-to-top: most expensive decarb pathway at the bottom, cheapest just below the
-        # counterfactual at the top.
+        # counterfactuals at the top.
         bottom_to_top = list(reversed(decarb_sorted_ascending))
-        if counterfactual in totals.index:
-            bottom_to_top.append(counterfactual)
+        for cf in counterfactuals:
+            if cf in totals.index:
+                bottom_to_top.append(cf)
         df["Pathway"] = pd.Categorical(df["Pathway"], categories=bottom_to_top, ordered=True)
 
         color_map = {
@@ -718,26 +733,38 @@ with tab_flows:
 
     diagrams: dict[str, str] = {}
 
+    diagrams["Existing Unabated OCGT (no removals)"] = _dot(
+        nodes=[
+            ("gas",       f"Natural gas\\n${gas_price:.1f}/MMBtu", "feedstock"),
+            ("ch4_store", f"CH4 storage\\n{storage_cycles:.0f} cycles/yr", "storage"),
+            ("ocgt",      f"Existing OCGT\\n(no CAPEX)\\nη={preset['ocgt']['efficiency']:.0%}\\n(CO2 vented, not priced)", "turbine"),
+            ("out",       "Electricity\\ndelivered", "output"),
+        ],
+        edges=[("gas", "ch4_store", ""), ("ch4_store", "ocgt", "CH4"), ("ocgt", "out", "")],
+    )
+
     diagrams["Unabated OCGT (no removals)"] = _dot(
         nodes=[
-            ("gas",  f"Natural gas\\n${gas_price:.1f}/MMBtu", "feedstock"),
-            ("ocgt", f"OCGT\\nη={preset['ocgt']['efficiency']:.0%}\\n(CO2 vented, not priced)", "turbine"),
-            ("out",  "Electricity\\ndelivered", "output"),
+            ("gas",       f"Natural gas\\n${gas_price:.1f}/MMBtu", "feedstock"),
+            ("ch4_store", f"CH4 storage\\n{storage_cycles:.0f} cycles/yr", "storage"),
+            ("ocgt",      f"OCGT\\nη={preset['ocgt']['efficiency']:.0%}\\n(CO2 vented, not priced)", "turbine"),
+            ("out",       "Electricity\\ndelivered", "output"),
         ],
-        edges=[("gas", "ocgt", ""), ("ocgt", "out", "")],
+        edges=[("gas", "ch4_store", ""), ("ch4_store", "ocgt", "CH4"), ("ocgt", "out", "")],
     )
 
     diagrams[f"Unabated OCGT + ${int(co2_removal)}/t removal"] = _dot(
         nodes=[
-            ("gas",    f"Natural gas\\n${gas_price:.1f}/MMBtu", "feedstock"),
-            ("ocgt",   f"OCGT\\nη={preset['ocgt']['efficiency']:.0%}", "turbine"),
-            ("out",    "Electricity\\ndelivered", "output"),
-            ("co2",    "CO2 emissions", "output"),
-            ("offset", f"Carbon removal\\n${int(co2_removal)}/t", "offset"),
+            ("gas",       f"Natural gas\\n${gas_price:.1f}/MMBtu", "feedstock"),
+            ("ch4_store", f"CH4 storage\\n{storage_cycles:.0f} cycles/yr", "storage"),
+            ("ocgt",      f"OCGT\\nη={preset['ocgt']['efficiency']:.0%}", "turbine"),
+            ("out",       "Electricity\\ndelivered", "output"),
+            ("co2",       "CO2 emissions", "output"),
+            ("offset",    f"Carbon removal\\n${int(co2_removal)}/t", "offset"),
         ],
         edges=[
-            ("gas", "ocgt", ""), ("ocgt", "out", ""),
-            ("ocgt", "co2", ""), ("co2", "offset", "offset"),
+            ("gas", "ch4_store", ""), ("ch4_store", "ocgt", "CH4"),
+            ("ocgt", "out", ""), ("ocgt", "co2", ""), ("co2", "offset", "offset"),
         ],
     )
 
@@ -852,11 +879,21 @@ with tab_sensitivity:
 
             h2_builder = build_h2_ocgt if h2_turbine == "OCGT" else build_h2_ccgt
 
+            # Existing OCGT — zero CAPEX
+            existing_ocgt_ovr = copy.deepcopy(preset_override["ocgt"])
+            existing_ocgt_ovr["capex_per_kw"] = 0
+
             args_map = {
+                "Existing Unabated OCGT (no removals)": lambda: build_unabated_gas_no_removal(
+                    existing_ocgt_ovr,
+                    gas_price_usd_per_mmbtu=overrides.get("globals.gas_price", gas_price),
+                    discount_rate=discount_rate,
+                    ch4_storage=preset_override["ch4_storage"]),
                 "Unabated OCGT (no removals)": lambda: build_unabated_gas_no_removal(
                     preset_override["ocgt"],
                     gas_price_usd_per_mmbtu=overrides.get("globals.gas_price", gas_price),
-                    discount_rate=discount_rate),
+                    discount_rate=discount_rate,
+                    ch4_storage=preset_override["ch4_storage"]),
                 f"Green H2 → {h2_turbine}": lambda: h2_builder(
                     preset_override["electrolyser"], preset_override["h2_storage"], h2_t_dict,
                     electricity_price=overrides.get("globals.elec_price", elec_price),
@@ -869,7 +906,8 @@ with tab_sensitivity:
                     preset_override["ocgt"],
                     gas_price_usd_per_mmbtu=overrides.get("globals.gas_price", gas_price),
                     co2_removal_cost=overrides.get("globals.co2_removal", co2_removal),
-                    discount_rate=discount_rate),
+                    discount_rate=discount_rate,
+                    ch4_storage=preset_override["ch4_storage"]),
                 f"E-CH4 (DAC) → {em_turbine}": lambda: build_emethane(
                     preset_override["electrolyser"], preset_override["methanation"],
                     preset_override["ch4_storage"], em_t_dict,
@@ -912,11 +950,21 @@ with tab_sensitivity:
                     (f"{tkey}.utilisation", preset[tkey]["utilisation"], f"{tlabel} utilisation"),
                     ("h2_storage.capex_per_kwh", preset["h2_storage"]["capex_per_kwh"], "H2 storage CAPEX"),
                 ]
+            if path_name == "Existing Unabated OCGT (no removals)":
+                return [
+                    ("ocgt.utilisation", preset["ocgt"]["utilisation"], "OCGT utilisation"),
+                    ("ocgt.efficiency", preset["ocgt"]["efficiency"], "OCGT η"),
+                    ("ch4_storage.capex_per_kwh", preset["ch4_storage"]["capex_per_kwh"], "CH4 storage CAPEX"),
+                    ("ch4_storage.cycles_per_year", preset["ch4_storage"]["cycles_per_year"], "CH4 storage cycles/yr"),
+                    ("globals.gas_price", gas_price, "Natural gas price"),
+                ]
             if path_name == "Unabated OCGT (no removals)":
                 return [
                     ("ocgt.capex_per_kw", preset["ocgt"]["capex_per_kw"], "OCGT CAPEX"),
                     ("ocgt.utilisation", preset["ocgt"]["utilisation"], "OCGT utilisation"),
                     ("ocgt.efficiency", preset["ocgt"]["efficiency"], "OCGT η"),
+                    ("ch4_storage.capex_per_kwh", preset["ch4_storage"]["capex_per_kwh"], "CH4 storage CAPEX"),
+                    ("ch4_storage.cycles_per_year", preset["ch4_storage"]["cycles_per_year"], "CH4 storage cycles/yr"),
                     ("globals.gas_price", gas_price, "Natural gas price"),
                 ]
             if "CH4 + CCS" in path_name:
@@ -931,6 +979,8 @@ with tab_sensitivity:
                 return [
                     ("ocgt.capex_per_kw", preset["ocgt"]["capex_per_kw"], "OCGT CAPEX"),
                     ("ocgt.utilisation", preset["ocgt"]["utilisation"], "OCGT utilisation"),
+                    ("ch4_storage.capex_per_kwh", preset["ch4_storage"]["capex_per_kwh"], "CH4 storage CAPEX"),
+                    ("ch4_storage.cycles_per_year", preset["ch4_storage"]["cycles_per_year"], "CH4 storage cycles/yr"),
                     ("globals.gas_price", gas_price, "Natural gas price"),
                     ("globals.co2_removal", co2_removal, "Carbon removal $/t"),
                 ]
@@ -1075,10 +1125,18 @@ with tab_heatmap:
             ccgt_ccs2 = copy.deepcopy(preset_h["ccgt"])
             ccgt_ccs2["efficiency"] = preset_h["ccgt"]["efficiency"] * preset_h["ccs"]["efficiency"]
 
+            if h_path == "Existing Unabated OCGT (no removals)":
+                existing_ocgt_h = copy.deepcopy(preset_h["ocgt"])
+                existing_ocgt_h["capex_per_kw"] = 0
+                return build_unabated_gas_no_removal(existing_ocgt_h,
+                                                    gas_price_usd_per_mmbtu=overrides["gas_price"],
+                                                    discount_rate=discount_rate,
+                                                    ch4_storage=preset_h["ch4_storage"])
             if h_path == "Unabated OCGT (no removals)":
                 return build_unabated_gas_no_removal(preset_h["ocgt"],
                                                     gas_price_usd_per_mmbtu=overrides["gas_price"],
-                                                    discount_rate=discount_rate)
+                                                    discount_rate=discount_rate,
+                                                    ch4_storage=preset_h["ch4_storage"])
             if h_path.startswith("Green H2"):
                 t_is_ocgt = h_path.endswith("→ OCGT")
                 t_dict = preset_h["ocgt"] if t_is_ocgt else preset_h["ccgt"]
@@ -1091,7 +1149,8 @@ with tab_heatmap:
                                           discount_rate=discount_rate)
             if h_path.startswith("Unabated") and "removal" in h_path:
                 return build_unabated_gas_removal(preset_h["ocgt"], gas_price_usd_per_mmbtu=overrides["gas_price"],
-                                                  co2_removal_cost=co2_removal, discount_rate=discount_rate)
+                                                  co2_removal_cost=co2_removal, discount_rate=discount_rate,
+                                                  ch4_storage=preset_h["ch4_storage"])
             if "E-CH4" in h_path:
                 co2_val = overrides["co2_dac"] if "DAC" in h_path else (
                     overrides["co2_biogenic"] if "Biogenic" in h_path else overrides["co2_point_source"]

@@ -308,37 +308,49 @@ def build_ch4_ccs_ccgt(ccgt, ccs, gas_price_usd_per_mmbtu, discount_rate=None):
     return Pathway(name="CH4 + CCS → CCGT", stages=stages)
 
 
-def build_unabated_gas_removal(ocgt, gas_price_usd_per_mmbtu, co2_removal_cost, discount_rate=None):
+def build_unabated_gas_removal(ocgt, gas_price_usd_per_mmbtu, co2_removal_cost,
+                               discount_rate=None, ch4_storage=None):
     MMBTU_PER_MWH = 3.412
     fuel_cost_per_mwh_elec = gas_price_usd_per_mmbtu * MMBTU_PER_MWH / max(ocgt["efficiency"], 1e-6)
     turbine = _stage_from_dict("OCGT", ocgt, discount_rate)
     turbine.fuel_cost_per_mwh_out = fuel_cost_per_mwh_elec
     # Emissions: natural gas ~0.2 tCO2/MWh_LHV; divided by turbine eff
     emissions_t_per_mwhe = 0.2 / max(ocgt["efficiency"], 1e-6)
+    stages = []
+    if ch4_storage:
+        stages.append(_stage_from_dict("CH4 storage", ch4_storage, discount_rate, is_storage=True))
+    stages.append(turbine)
     return Pathway(
         name=f"Unabated OCGT + removals (${co2_removal_cost}/tCO2)",
-        stages=[turbine],
+        stages=stages,
         carbon_removal_cost_per_t=co2_removal_cost,
         co2_emitted_t_per_mwhe=emissions_t_per_mwhe,
     )
 
 
-def build_unabated_gas_no_removal(ocgt, gas_price_usd_per_mmbtu, discount_rate=None):
+def build_unabated_gas_no_removal(ocgt, gas_price_usd_per_mmbtu,
+                                  discount_rate=None, ch4_storage=None):
     """
     Fossil status-quo counterfactual: unabated OCGT, no carbon removal offset.
 
     No CO2 cost line; emissions are externalised. This is the 'do nothing to decarbonise'
     comparator that every other pathway must beat on a delivered-electricity cost basis
     before even considering climate externalities.
+
+    If ch4_storage is provided, a CH4 storage stage is prepended (seasonal gas storage).
     """
     MMBTU_PER_MWH = 3.412
     fuel_cost_per_mwh_elec = gas_price_usd_per_mmbtu * MMBTU_PER_MWH / max(ocgt["efficiency"], 1e-6)
     turbine = _stage_from_dict("OCGT", ocgt, discount_rate)
     turbine.fuel_cost_per_mwh_out = fuel_cost_per_mwh_elec
     emissions_t_per_mwhe = 0.2 / max(ocgt["efficiency"], 1e-6)
+    stages = []
+    if ch4_storage:
+        stages.append(_stage_from_dict("CH4 storage", ch4_storage, discount_rate, is_storage=True))
+    stages.append(turbine)
     p = Pathway(
         name="Unabated OCGT (no removals)",
-        stages=[turbine],
+        stages=stages,
     )
     # Attach emissions info for display (not costed)
     p.co2_emitted_t_per_mwhe = emissions_t_per_mwhe
