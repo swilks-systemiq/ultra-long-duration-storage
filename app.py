@@ -45,6 +45,33 @@ st.set_page_config(
     layout="wide",
 )
 
+# ---------------------------------------------------------------------------
+# Password gate — set APP_PASSWORD in .streamlit/secrets.toml or env var
+# ---------------------------------------------------------------------------
+import hmac, os
+
+def _check_password() -> bool:
+    """Return True if the user has entered the correct password."""
+    password = st.secrets.get("APP_PASSWORD") or os.environ.get("APP_PASSWORD", "")
+    if not password:
+        return True  # no password configured — skip gate
+
+    if st.session_state.get("authenticated"):
+        return True
+
+    with st.form("login"):
+        st.text_input("Password", type="password", key="pw_input")
+        submitted = st.form_submit_button("Enter")
+    if submitted and hmac.compare_digest(st.session_state.pw_input, password):
+        st.session_state.authenticated = True
+        st.rerun()
+    elif submitted:
+        st.error("Incorrect password.")
+    return False
+
+if not _check_password():
+    st.stop()
+
 st.title("⚡ Seasonal Storage — Techno-Economic Comparison")
 st.caption(
     "Pressure-testing the ETC (2025) Power Systems Transformation seasonal-storage "
