@@ -1,0 +1,13 @@
+[project]
+name = "ulds-model"
+version = "0.1.0"
+description = "LCOS engine for ultra-long duration (50h+) storage pathways"
+requires-python = ">=3.11"
+dependencies = ["numpy>=1.24,<2"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["ulds_model*"]

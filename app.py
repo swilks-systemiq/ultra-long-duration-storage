@@ -16,7 +16,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-from defaults import (
+from ulds_model.defaults import (
     get_preset,
     flatten_for_display,
     REGIONS,
@@ -25,7 +25,7 @@ from defaults import (
     GLOBAL_DEFAULTS,
     DAC_USD_PER_T_BY_YEAR,
 )
-from model import (
+from ulds_model.model import (
     build_h2_ocgt,
     build_h2_ccgt,
     build_emethane,
